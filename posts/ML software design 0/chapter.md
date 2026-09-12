@@ -1,0 +1,63 @@
+# Introduction
+
+With the increasing digitisation of the physical world, more and more companies, big and small, are kickstarting their own ML initiatives to get a competitive advantage. On the other side of the fence, ML-related training has exploded in popularity too, from the humble open source repo to fairly pricey, month-long courses, ranging in content from ML's fundamental theory to massive scale ML operations.
+
+So why is this course needed then? I believe there is a sizable gap in ML training out there. If you want to learn the fundamentals, there are plenty of MSc, PhDs and online courses that will give you a in-depth knowledge of ML, and maybe even some practical experience. If you want to learn DevOps for ML operations, there are several good platforms where you can practice it. But what about in between? Data Science courses tend to finish when they teach you to fit and evaluate a complex model in a Jupyter notebook. ML Engineering courses tend to start when you already have something ready to deploy. But the gulf between those two points can be huge. 
+
+![image](../../images/ml-pyramid.png)
+
+
+I have worked in ML since 2015, and throughout my career I have consistently found that this gap is where a lot of projects get stuck. Some examples of this problem:
+
+
+* A team can run model training just fine but the deployment process is manual and error-prone, and it is passed by word of mouth from one team member to another
+
+* Or, it is all automated but changing *anything* in the pipeline is impossible because components are scattered and hardcoded everywhere. 
+
+The above situations have knock on effects too: new data batches break the code all the time, testing new approaches take too long, results are unreliable and retracted often, explaining changes in performance becomes very hard, and so on.
+
+This is a course in *ML software design*, and it sits above Data Science but below MLOps. It teaches you how to go from a list of notebooks to a piece of code that is easy to use, modify, configure and package. In other words, it teaches you to turn a succesful experiment into a good piece of software. Both Data Scientists and MLOps engineers will thank you for it.
+
+There is more to this than just namedropping the SOLID principles. ML software has its own specialised challenges, its own specialised design patterns for these challenges, and its own libraries with implementations of these patterns. This course teaches you what those patterns are, why they are important, where to look for them, and how to build your own if you need to.
+
+
+## Who is this course for
+
+This course is mainly for Data Scientists (or anyone, really) that want to take the leap to ML Engineering. If you are tired of dealing with the scenarios above, this course is also for you.
+
+The reader is expected to have moderate proficiency in Python and familiarity with object-oriented programming. Some experience with the Unix command line is beneficial.
+
+To get the most out of this course, it is recommended that you have some practical experience with ML projects in industry.
+
+## What this course covers
+
+This course is divided into 3 chapters
+
+
+### 1. The building blocks of ML software design
+
+A guide to using `scikit-learn` and `MLFLow` for ML software design, what their purpose is, why you should use them and where they fit in the grand scheme of ML. Common problems and design patterns in ML processing pipelines and their implementation in the Python ecosystem. 
+
+
+### 2. Making your own building blocks
+
+Every company has their own pieces of bespoke business logic you will have to embed in your data processing and modelling code, and it won't always fit neatly into off-the-shelf patterns. This chapter shows you how to build on top of them to fit your use case, whatever it is.
+
+### 3. Writing ML for humans
+
+The previous chapters will take you a long way into making your code readable enough, but nobody wants to figure things out by themselves in the middle of a massive codebase. This chapter discusses some ways to make your code easier to use.
+
+## What this course does not contain
+
+This course is entirely about the intersection between Software Engineering and Machine Learning, and won't cover topics that fall outside of this intersection, such as:
+
+* **Statistics and ML theory**
+
+* **Project management, version control, etc.**
+
+* **Specific cloud services**
+
+* **LLMs**: Challenges in generative AI projects come entirely from the deployment side: operations, monitoring and scaling. There is no training or experimentation involved, and hence are out of the scope of this course.
+
+
+
