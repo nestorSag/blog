@@ -1,0 +1,13 @@
+---
+title: "About"
+about:
+  template: jolla
+  links:
+    - icon: github
+      text: GitHub
+      href: https://github.com/nestorSag
+---
+
+## About this blog
+
+A course on ML software design: what sits between Data Science and MLOps, and how to turn a successful experiment into good software.

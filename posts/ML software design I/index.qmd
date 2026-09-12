@@ -1,5 +1,9 @@
-# ML software design I: the scaffolds
-
+---
+title: "ML Software Design I: the scaffolds"
+description: "What scikit-learn's design solves for ML software, from transformers to pipelines."
+date: "2026-09-08"
+categories: [scikit-learn, design-patterns]
+---
 
 # The ML building blocks
 

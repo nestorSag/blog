@@ -1,0 +1,28 @@
+project:
+  type: website
+  output-dir: _site
+
+website:
+  title: "Writing ML Software"
+  description: "A course on ML software design: bridging Data Science and MLOps"
+  site-url: https://nestorsag.github.io/blog/
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: about.qmd
+        text: About
+    right:
+      - icon: rss
+        href: index.xml
+      - icon: github
+        href: https://github.com/nestorSag/blog
+
+format:
+  html:
+    theme: litera
+    css: styles.css
+    html-math-method: katex
+    highlight-style: github
+    code-block-bg: true
+    toc: true

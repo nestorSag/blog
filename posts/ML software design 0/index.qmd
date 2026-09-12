@@ -1,3 +1,10 @@
+---
+title: "ML Software Design: Introduction"
+description: "Why this course exists, who it's for, and what it covers."
+date: "2026-09-01"
+categories: [overview]
+---
+
 # Introduction
 
 With the increasing digitisation of the physical world, more and more companies, big and small, are kickstarting their own ML initiatives to get a competitive advantage. On the other side of the fence, ML-related training has exploded in popularity too, from the humble open source repo to fairly pricey, month-long courses, ranging in content from ML's fundamental theory to massive scale ML operations.
