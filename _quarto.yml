@@ -3,8 +3,8 @@ project:
   output-dir: _site
 
 website:
-  title: "Writing ML Software"
-  description: "A course on ML software design: bridging Data Science and MLOps"
+  title: "ML notes from the trenches"
+  description: "Some notes on machine learning and data science"
   site-url: https://nestorsag.github.io/blog/
   navbar:
     left:
@@ -20,9 +20,10 @@ website:
 
 format:
   html:
-    theme: litera
+    theme: darkly
     css: styles.css
     html-math-method: katex
     highlight-style: github
     code-block-bg: true
     toc: true
+    toc-depth: 4

@@ -1,13 +1,17 @@
 ---
 title: "About"
+image: https://avatars.githubusercontent.com/u/7478206?v=4
 about:
   template: jolla
   links:
     - icon: github
       text: GitHub
       href: https://github.com/nestorSag
+    - icon: linkedin
+      text: LinkedIn
+      href: https://www.linkedin.com/in/nestor-sanchez-0a7a4793/
 ---
 
-## About this blog
+My name is Nestor, I am a Data Scientist turned ML engineer, and have been working in the field since before transformers were cool, sometimes doing research and most of the times working on applied projects. I am particularly interested in energy and net zero tech. Lately I have been doing more and more MLOps.
 
-A course on ML software design: what sits between Data Science and MLOps, and how to turn a successful experiment into good software.
+I expand this blog whenever I find something interesting out there.

@@ -1,1 +1,5 @@
 /* project-specific style overrides */
+
+#quarto-document-content p {
+  text-align: justify;
+}
