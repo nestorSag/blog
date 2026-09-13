@@ -10,7 +10,7 @@
 <atom:link href="https://nestorsag.github.io/blog/index.xml" rel="self" type="application/rss+xml"/>
 <description>Some notes on machine learning and data science</description>
 <generator>quarto-1.10.18</generator>
-<lastBuildDate>Mon, 07 Sep 2026 23:00:00 GMT</lastBuildDate>
+<lastBuildDate>Tue, 08 Sep 2026 00:00:00 GMT</lastBuildDate>
 <item>
   <title>ML Software Design I: the scaffolding</title>
   <link>https://nestorsag.github.io/blog/posts/ML software design I/</link>
@@ -444,7 +444,7 @@ font-style: inherit;">=</span>np.exp,</span>
   <category>scikit-learn</category>
   <category>design-patterns</category>
   <guid>https://nestorsag.github.io/blog/posts/ML software design I/</guid>
-  <pubDate>Mon, 07 Sep 2026 23:00:00 GMT</pubDate>
+  <pubDate>Tue, 08 Sep 2026 00:00:00 GMT</pubDate>
 </item>
 </channel>
 </rss>
