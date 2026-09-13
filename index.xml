@@ -1,0 +1,450 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>ML notes from the trenches</title>
+<link>https://nestorsag.github.io/blog/</link>
+<atom:link href="https://nestorsag.github.io/blog/index.xml" rel="self" type="application/rss+xml"/>
+<description>Some notes on machine learning and data science</description>
+<generator>quarto-1.10.18</generator>
+<lastBuildDate>Mon, 07 Sep 2026 23:00:00 GMT</lastBuildDate>
+<item>
+  <title>ML Software Design I: the scaffolding</title>
+  <link>https://nestorsag.github.io/blog/posts/ML software design I/</link>
+  <description><![CDATA[ 
+
+
+
+
+<section id="motivation" class="level1">
+<h1>Motivation</h1>
+<p>I believe there is a sizable gap in ML training out there. If you want to learn the fundamentals, there are plenty of MSc, PhDs and online courses that will give you a in-depth knowledge of ML, and maybe even some practical experience. If you want to learn DevOps for ML operations, there are several good platforms where you can practice it. But what about in between? Data Science courses tend to finish when they teach you to fit and evaluate a complex model in a Jupyter notebook. ML Engineering courses tend to start when you already have something ready to deploy. But the gulf between those two points can be huge.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://nestorsag.github.io/blog/posts/ML software design I/images/ml-pyramid.png" class="img-fluid figure-img"></p>
+<figcaption>The hierarchy of ML needs</figcaption>
+</figure>
+</div>
+<p>Throughout my career, I have consistently found that this gap is where a lot of projects get stuck. Some examples of this problem:</p>
+<ul>
+<li><p>A team can run model training just fine but the deployment process is manual and error-prone, and it is passed by word of mouth from one team member to another</p></li>
+<li><p>Or, it is all automated but changing <em>anything</em> in the pipeline is impossible because components are scattered and tightly coupled.</p></li>
+</ul>
+<p>The above situations have knock on effects too: new data batches break the code all the time, testing new approaches take too long, results are unreliable and often retracted, explaining changes in performance becomes very hard, and so on.</p>
+<p>In this and the following couple posts I’ll share what has worked for me in the past to bridge the gap between Data Science and MLOps.</p>
+</section>
+<section id="the-ml-building-blocks" class="level1">
+<h1>The ML building blocks</h1>
+<p>If you are a Data Scientist you have probably used <code>scikit-learn</code> before. It is <em>the</em> library for classic ML in Python, and implements a wide range of learning algorithms and related utilities.</p>
+<p>This chapter looks at the problems <code>scikit-learn</code> solves from the point of view of software design.</p>
+<p>Bridging the gap between experimentation and deployment is often referred to as <em>productionising the model</em>, <em>bringing it to production</em> and similar variants. There is an element of truth to that: you are trying to turn your results into a product. What does that even mean? Think of any product you buy online, say, a speaker.</p>
+<p>As a consumer, you would expect at the very least that</p>
+<ul>
+<li><p>The speaker plugs into a typical electrical socket and works on the typical bluetooth connection. It is standardised.</p></li>
+<li><p>You do not need to worry about how it actually works under the hood. It just does.</p></li>
+<li><p>It works the same in your home or your friend’s home. It is reliable.</p></li>
+</ul>
+<p>Deploying a model is no different: your model is the product, and downstream systems (i.e.&nbsp;the ones that will interact with it in the wild) are its consumers. if you release a defective product, you are going to have a lot of angry customers.</p>
+<p>Standardisation, portability and extensibility are, roughly, the challenges that <code>scikit-learn</code> helps you solve for ML projects. It does so through a combination of object-oriented interfaces and crucial abstractions developed through more than 20 years.</p>
+<section id="transformers-the-data-processing-blocks" class="level2">
+<h2 class="anchored" data-anchor-id="transformers-the-data-processing-blocks">Transformers: The data processing blocks</h2>
+<p>Scikit-learn is a lot more than a bunch of off-the-shelf learning algorithms. I would argue that the most powerful object in the library is not its long list of regressors and classifiers, but the conventions that define what all of these objects actually do, and how they do it.</p>
+<p>If you go to the project’s source code you’ll soon realise that most objects in the library inherit from a handful of base classes, such as <code>BaseEstimator</code>, <code>TransformerMixin</code>, <code>RegressorMixin</code>, and so on. In <code>scikit-learn</code>, an estimator, regressor, classifier, transformer, and so on, are precisely defined by their corresponding base classes. But what is the deal with classes and interfaces anyway? It is worth spending a couple minutes thinking about what this means.</p>
+<p>Let’s think for a minute about what exactly a data processing pipeline is in the context of ML. Intuitively speaking, it is the process of turning raw data (whatever that means) into data ready for the model to consume. So we know both the inputs and outputs of a processing pipeline have to be “data”. Let’s narrow it down and assume “data” is a <code>DataFrame</code> (although the library also works with Numpy arrays and occasionally sparse matrices).</p>
+<p>So data processing is, roughly, a function with signature</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1" style="background: #f1f3f5;"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb1-1"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> data_processing(raw_data: pd.DataFrame) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> pd.DataFrame</span></code></pre></div></div>
+<p>As for types and shapes, we could argue that since most ML models can only handle numerical data, the output types must be a subclass of <code>np.number</code>. For the shapes, we can hardly place any restrictions as there are valid reasons why you would resize the data:</p>
+<ul>
+<li><p><strong>Feature engineering</strong>: You may want to create new features from raw columns</p></li>
+<li><p><strong>One-hot encoding</strong>: One-hot encoding creates one extra column in your data per unique category</p></li>
+<li><p><strong>feature selection</strong>: The purpose of feature selection algorithms is to drop unimportant columns before model training.</p></li>
+</ul>
+<p>So it is entirely possible you don’t know the width of the final, model-ready data set in advance, even though you know the series of steps you want to apply, and that’s ok.</p>
+<blockquote class="blockquote">
+<p><strong><em>NOTE:</em></strong> What about row count? we could argue that filtering is a valid data processing operation, and in most contexts that might be true, but <code>scikit-learn</code> draws the line here and <strong>requires transfromations to always preserve the number of rows</strong>. Why? in ML, a lot of the time you need to compare outputs against true values, i.e.&nbsp;<code>y-true - y_pred</code>, for example when computing a metric or as part of iterative learning algorithms. If you cannot guarantee that outputs are of the same length, this operation is not well defined and you suddenly will have lots of errors in your code.</p>
+</blockquote>
+<p>That would be about it if it wasn’t for the fact that many common processing steps are learnable, e.g.&nbsp;a one-hot encoder has to first look at category data so that it knows the category set. This means processing steps need to hold some state (i.e.&nbsp;the fitted parameters), which means plain functions are not fit for purpose as they can’t do the latter. So, we instead move to classes, which are, in a few words, a bunch of stateful functions. During traning, the object looks at training data, updates its internal state, and returns itself. During data processing, it implements the signature specified above.</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2" style="background: #f1f3f5;"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb2-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.base <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> TransformerMixin</span>
+<span id="cb2-2"></span>
+<span id="cb2-3"><span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">class</span> DataTransformation(TransformerMixin):</span>
+<span id="cb2-4"></span>
+<span id="cb2-5">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> <span class="fu" style="color: #4758AB;
+background-color: null;
+font-style: inherit;">__init__</span>(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>):</span>
+<span id="cb2-6">        <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># save parameters</span></span>
+<span id="cb2-7">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">pass</span></span>
+<span id="cb2-8"></span>
+<span id="cb2-9">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> fit(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>, X: pd.DataFrame) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>:</span>
+<span id="cb2-10">        <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># fit the model</span></span>
+<span id="cb2-11">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> <span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span></span>
+<span id="cb2-12"></span>
+<span id="cb2-13">    <span class="kw" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">def</span> transform(<span class="va" style="color: #111111;
+background-color: null;
+font-style: inherit;">self</span>, X: pd.DataFrame) <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">-&gt;</span> pd.DataFrame</span>
+<span id="cb2-14">        <span class="co" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;"># transform data</span></span>
+<span id="cb2-15">        <span class="cf" style="color: #003B4F;
+background-color: null;
+font-weight: bold;
+font-style: inherit;">return</span> X</span></code></pre></div></div>
+<p>If a processing transformation does not have learnable parameters, it can just do nothing inside <code>fit</code>. This is the minimum interface you need to implement a valid transformer. By inheriting from <code>TransformerMixin</code> you make sure your objects already come with some handy side logic you don’t have to write yourself, such as metadata routing.</p>
+<p>Many common strategies in ML fit the definition of a transformer:</p>
+<ul>
+<li><p>Data imputation</p></li>
+<li><p>Dimensionality reduction</p></li>
+<li><p>Feature selection</p></li>
+<li><p>Feature engineering</p></li>
+</ul>
+<p>Moreover, in many ML projects, most of the time is spent getting the data processing right.</p>
+<section id="composing-processing-steps" class="level3">
+<h3 class="anchored" data-anchor-id="composing-processing-steps">Composing processing steps</h3>
+<p>In real life, data processing usually involves several, probably interdependent, transformations, (e.g.&nbsp;one step creates a column that is used in another step downstream). Usually you will at least want to:</p>
+<ul>
+<li><p>Drop columns according to some hard rules</p></li>
+<li><p>Derive columns from existing ones</p></li>
+<li><p>One-hot encode specific columns</p></li>
+<li><p>Apply custom business logic</p></li>
+</ul>
+<p>What you have in the general case is (without being super rigurous here) sort of a <a href="https://en.wikipedia.org/wiki/Directed_acyclic_graph">directed acyclic graph</a> (DAG) of operations over subsets of columns, with the constraint that there is a single input and output nodes (i.e.&nbsp;the pre and post processed data).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://nestorsag.github.io/blog/posts/ML software design I/images/transformer-dag.png" class="img-fluid figure-img"></p>
+<figcaption>ML data processing can be thought as a DAG of column maps</figcaption>
+</figure>
+</div>
+<p>The good news though, is that a DAG like this also fits the transformer interface above! Even better, <code>scikit-learn</code> provides two crucial pieces that let us build any processing DAG we need.</p>
+<section id="columntransformer-the-splitter-and-joiner" class="level4">
+<h4 class="anchored" data-anchor-id="columntransformer-the-splitter-and-joiner">ColumnTransformer, the splitter and joiner</h4>
+<p>The <code>ColumnTransformer</code> class lets you map different column subsets to different transformations. It concatenates all the results into a single, final output DataFrame (or array).</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://nestorsag.github.io/blog/posts/ML software design I/images/column-transformer.png" class="img-fluid figure-img"></p>
+<figcaption><code>ColumnTransformer</code>s are powerful enough to represent entire DAGs of column maps</figcaption>
+</figure>
+</div>
+<p>If you look at the documentation you’ll see it receives a list of triplets as inputs. Each triple has a custom step name (for your convenience), a transformation to apply, and a list of column names.</p>
+<p>You can pass your transformations in a few different formats:</p>
+<ul>
+<li><p>As transformer instances</p></li>
+<li><p>as strings: <code>'drop'</code> and <code>'passthrough'</code> will cause columns to be dropped or passed as they are, respectively</p></li>
+<li><p>If you want to pass a function, you can wrap it in a <a href="https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.FunctionTransformer.html">FunctionTransformer</a> and pass it that way</p></li>
+</ul>
+<p>You don’t need to cover all of your column names. If you leave some out, the <code>remainder</code> parameter determines if they are dropped or passed through. You can even choose columns dynamically based on naming patterns and data types by using <a href="https://scikit-learn.org/stable/modules/generated/sklearn.compose.make_column_selector.html">make_column_selector</a>.</p>
+<p>This is what the image above looks like in Python:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3" style="background: #f1f3f5;"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb3-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.preprocessing <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> (</span>
+<span id="cb3-2">    StandardScaler, </span>
+<span id="cb3-3">    OneHotEncoder,</span>
+<span id="cb3-4">    FunctionTransformer,</span>
+<span id="cb3-5">)</span>
+<span id="cb3-6"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.compose <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> ColumnTransformer</span>
+<span id="cb3-7"></span>
+<span id="cb3-8">data_preproc <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> ColumnTransformer(</span>
+<span id="cb3-9">    transformers <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [</span>
+<span id="cb3-10">        (<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"scaler"</span>, StandardScaler(), [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"age"</span>]),</span>
+<span id="cb3-11">        (<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"ohe"</span>, OneHotEncoder(), [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"gender"</span>, <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"city"</span>]),</span>
+<span id="cb3-12">        (<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"signup_date"</span>, FunctionTransformer(get_days_since_signup), [<span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"signup_date"</span>]),</span>
+<span id="cb3-13">    ],</span>
+<span id="cb3-14">    remainder<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"passthrough"</span>,</span>
+<span id="cb3-15">)</span></code></pre></div></div>
+<p><code>ColumnTransformer</code> is a powerful and flexible abstraction. Most of the time, data processing logic can be factored into some combination of <code>ColumnTransformer</code> and <code>Pipeline</code> objects.</p>
+</section>
+<section id="pipelines-the-conveyor-belt" class="level4">
+<h4 class="anchored" data-anchor-id="pipelines-the-conveyor-belt">pipelines, the conveyor belt</h4>
+<p>A <a href="https://scikit-learn.org/stable/modules/generated/sklearn.pipeline.Pipeline.html">Pipeline</a> lets you chain up transformations. It receives a list of tuples with a custom step name (for your convenience) and a transformation to apply. Steps are applied sequentially; note that unlike <code>ColumnTransformer</code>, the steps are applied to the entire input rather than a subset of columns.</p>
+<p>You’ll often find that complex transformations build on top of the outputs of other transformations, and complex business logic usually requires multiple chained processing steps. Pipelines shine in those cases.</p>
+<p>Pipelines are also powerful for another reason: they let you place a prediction model on top of it (i.e.&nbsp;as its last step). In practice this means they are a convenient wrapper for end-to-end ML processing: regardless of how complex your data processing logic is, and how sophisticated your predictive model is, the whole thing is going to be shaped into a pipeline, and we’ll talk later on about why this is such a good thing.</p>
+<p>To give you a simple example, imagine you want to perform dimensionality reduction using PCA on your data before passing it to your predictive model. You need to</p>
+<ol type="1">
+<li><p>Grab only the numerical features</p></li>
+<li><p>Standardise them</p></li>
+<li><p>Apply PCA</p></li>
+<li><p>Fit or predict from your predictive model</p></li>
+</ol>
+<p>Steps 1 and 2 can be done in one go by a <code>ColumnTransformer</code>, but you still have to fit your PCA and predictive models. We can use a <code>Pipeline</code> to chain them up:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4" style="background: #f1f3f5;"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb4-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.pipeline <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> Pipeline</span>
+<span id="cb4-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.preprocessing <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> (</span>
+<span id="cb4-3">    StandardScaler, </span>
+<span id="cb4-4">    FunctionTransformer,</span>
+<span id="cb4-5">)</span>
+<span id="cb4-6"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.decomposition <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> PCA</span>
+<span id="cb4-7"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.linear_model <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> LinearRegression</span>
+<span id="cb4-8"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.compose <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> ColumnTransformer</span>
+<span id="cb4-9"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.compose <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> make_column_selector</span>
+<span id="cb4-10"></span>
+<span id="cb4-11"></span>
+<span id="cb4-12">pipeline <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> Pipeline(</span>
+<span id="cb4-13">    steps<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[</span>
+<span id="cb4-14">        (</span>
+<span id="cb4-15">            <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"normaliser"</span>, </span>
+<span id="cb4-16">            ColumnTransformer(</span>
+<span id="cb4-17">                transformers <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> [</span>
+<span id="cb4-18">                    (</span>
+<span id="cb4-19">                        <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"scaler"</span>, </span>
+<span id="cb4-20">                        StandardScaler(), </span>
+<span id="cb4-21">                        make_column_selector(dtype_include<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>[np.number])</span>
+<span id="cb4-22">                    )</span>
+<span id="cb4-23">                ],</span>
+<span id="cb4-24">                remainder<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"drop"</span>,</span>
+<span id="cb4-25">            )</span>
+<span id="cb4-26">        ),</span>
+<span id="cb4-27">        (</span>
+<span id="cb4-28">            <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"PCA"</span>,</span>
+<span id="cb4-29">            PCA(n_components<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span><span class="dv" style="color: #AD0000;
+background-color: null;
+font-style: inherit;">2</span>)</span>
+<span id="cb4-30">        ),</span>
+<span id="cb4-31">        (</span>
+<span id="cb4-32">            <span class="st" style="color: #20794D;
+background-color: null;
+font-style: inherit;">"model"</span>,</span>
+<span id="cb4-33">            LinearRegression()</span>
+<span id="cb4-34">        ),</span>
+<span id="cb4-35">    ]</span>
+<span id="cb4-36">)</span></code></pre></div></div>
+<p>The code above might seem long at first glance, but the structure is simple: a list of steps, the first of which is a <code>ColumnTransformer</code> that rescales numerical data. The second one is PCA dimensionality reducer, and the last step is a linear regression model. The image below provides a more visual explanation.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://nestorsag.github.io/blog/posts/ML software design I/images/pipeline.png" class="img-fluid figure-img"></p>
+<figcaption>Graphical explanation of the code above</figcaption>
+</figure>
+</div>
+</section>
+</section>
+</section>
+<section id="why-use-transformers" class="level2">
+<h2 class="anchored" data-anchor-id="why-use-transformers">Why use transformers?</h2>
+<p>If you are new to transformers and pipelines you might wonder why you should bother using them or refactoring your existing code to fit into these patterns. After all, your code might already work just fine.</p>
+<p>I would encourage using them if you ever foresee your code being run:</p>
+<ul>
+<li><p>By another person</p></li>
+<li><p>In a different computer</p></li>
+<li><p>By yourself in the distant future</p></li>
+</ul>
+<p>If you intend to ever deploy your model (i.e., running it reliably on demand, on a different computer), all of them are likely true.</p>
+<p>Say you have trained and saved your model, relying on a collection of loose functions to process your data. The moment you intend to deploy your model you will need to solve a few additional issues.</p>
+<section id="the-environment-problem" class="level3">
+<h3 class="anchored" data-anchor-id="the-environment-problem">The environment problem</h3>
+<p>First, you have to make your data processing functions available in your deployment environment. Second, you need to use them in the exact same way you did during model training, or risk <a href="https://dswok.com/General-ML/Training-serving-skew#skew-distribution-shift-and-concept-drift">train-test skew</a>.</p>
+<p>If your team has ML or MLOps engineers, they won’t be pleased when you tell them <em>“here are these other Python files you need to include with the model, and here’s a code block you have to run every time you call it”</em>. Depending on the platform you intend to deploy to, shipping bespoke code along with your saved model may not even be possible! from these platform’s point of view, your ML object should be a black box that just works.</p>
+</section>
+<section id="the-context-problem" class="level3">
+<h3 class="anchored" data-anchor-id="the-context-problem">The context problem</h3>
+<p>Other people may not know that separate preprocessing logic exists and have to be run in a specific way as part of your modelling pipeline. This extra context is bound to cause headaches in your team, from errors preventing them from using the model, to developers coming up with their own interpretation of the processing logic in order to fix the problem, and silently producing different results. This is an unnecessary risk.</p>
+</section>
+<section id="the-maintenance-problem" class="level3">
+<h3 class="anchored" data-anchor-id="the-maintenance-problem">The maintenance problem</h3>
+<p>Even if you are able to ship bespoke code along with your saved model, there is now the problem of code duplication. You will have a copy of your processing logic in your machine, and another one on a remote server. This means that every time you update your processing logic, you have to remember to implement the changes in the deployment environment too. Moreover, you will possibly have to keep track of which version of the preproc logic was used in a given model run. This can make auditing results harder.</p>
+</section>
+<section id="how-do-these-building-blocks-help" class="level3">
+<h3 class="anchored" data-anchor-id="how-do-these-building-blocks-help">How do these building blocks help?</h3>
+<p>Environment, context and maintenance: three separate problems, all stemming from the same root cause, keeping your processing logic separate from your model. By using estimators, pipelines and transformers in your work, your end-to-end ML pipeline will be encapsulated as a <code>Pipeline</code> instance, regardless of how complex the internal logic may be. Thanks to scikit-learn’s base classes, this object can already be easily loaded, saved and serialised: in other words, the object saved in your local machine can be instantly reused in any other machine, and will produce the same results. Because it includes preprocessing logic, all anyone needs to do in order to use the model is calling <code>pipeline.predict(X)</code>. They don’t have to worry about any extra piece of context.</p>
+<p>Moreover, updates to the processing logic are now encapsulated as versioned pipeline files, which is a lot easier to track and avoids code duplication.</p>
+</section>
+</section>
+<section id="meta-estimators-add-ons-for-ml-pipelines" class="level2">
+<h2 class="anchored" data-anchor-id="meta-estimators-add-ons-for-ml-pipelines">Meta-estimators: add-ons for ML pipelines</h2>
+<p>A meta-estimator in scikit-learn is an estimator that takes another estimator(s) as an input parameter. There are several useful things you can do with a pattern like this, for example, <a href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html">performing grid search</a> and <a href="https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.BaggingClassifier.html">bagging multiple models</a>.</p>
+<section id="manipulating-inputs-and-outputs" class="level3">
+<h3 class="anchored" data-anchor-id="manipulating-inputs-and-outputs">Manipulating inputs and outputs</h3>
+<p>At its core, one of the reasons why meta-estimators are a powerful abstraction is because they can modify what goes in and what comes out the model they contain. The clearest illustration of this is the <a href="https://scikit-learn.org/stable/modules/generated/sklearn.compose.TransformedTargetRegressor.html">TransformedTargetRegressor</a>, which applies a transformation to the targets during training and inference. Think of the usual trick in linear regression of fitting a model to <img src="https://latex.codecogs.com/png.latex?%5Clog(y)"> rather than <img src="https://latex.codecogs.com/png.latex?y">. This is a popular technique for addressing problems of <a href="https://en.wikipedia.org/wiki/Homoscedasticity_and_heteroscedasticity">heteroscedasticity</a>, yet without a meta-estimator like this you would need to remember to transform your targets back to original scale every single time. Instead, you can achieve this in the following way:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5" style="background: #f1f3f5;"><pre class="sourceCode py code-with-copy"><code class="sourceCode python"><span id="cb5-1"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.compose <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> TransformedTargetRegressor</span>
+<span id="cb5-2"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">from</span> sklearn.linear_model <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> LinearRegression</span>
+<span id="cb5-3"></span>
+<span id="cb5-4"><span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">import</span> numpy <span class="im" style="color: #00769E;
+background-color: null;
+font-style: inherit;">as</span> np</span>
+<span id="cb5-5"></span>
+<span id="cb5-6">log_model <span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span> TransformedTargetRegressor(</span>
+<span id="cb5-7">    estimator<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>LinearRegression(),</span>
+<span id="cb5-8">    func<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>np.log,</span>
+<span id="cb5-9">    inverse_func<span class="op" style="color: #5E5E5E;
+background-color: null;
+font-style: inherit;">=</span>np.exp,</span>
+<span id="cb5-10">)</span></code></pre></div></div>
+<p>This model:</p>
+<ol type="1">
+<li>Applies <code>np.log</code> to <code>y</code> before training</li>
+<li>During inference, it applies <code>np.exp</code> to model outputs</li>
+</ol>
+<p>If you are familiar with <a href="https://realpython.com/primer-on-python-decorators/">function decorators</a>, you’ll realise this is similar to what they do: they augment an exiting function in some way by accessing their inputs and outputs.</p>
+<section id="practical-example-reshaping-satellite-imagery-inputs" class="level4">
+<h4 class="anchored" data-anchor-id="practical-example-reshaping-satellite-imagery-inputs">Practical example: reshaping satellite imagery inputs</h4>
+<p>During a project I was involved in, models were trained on batches of satellite imagery. Geospatial raster data is usually stored as high-dimensional arrays in formats like <a href="https://docs.xarray.dev/en/stable/">xarray</a>. While for classic ML models it is possible to transform it to tabular format before inference, and back into an array after it, this approach carries the same drawbacks as having to remember to apply the conversion every time you use the model.</p>
+<p>A custom meta-estimator that “unrolls” the array into a table format before passing it to the model, and rolls the model predictions back into the right shape, is a better long term solution, and overall allowed much quicker experimentation.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://nestorsag.github.io/blog/posts/ML software design I/images/satellite-imagery.png" class="img-fluid figure-img"></p>
+<figcaption>A meta-estimator that reshapes model inputs and outputs and allows using classic ML models directly on high-dimensional raster data</figcaption>
+</figure>
+</div>
+</section>
+</section>
+<section id="manipulating-the-model-itself" class="level3">
+<h3 class="anchored" data-anchor-id="manipulating-the-model-itself">Manipulating the model itself</h3>
+<p>Another powerful use of meta-estimators is manipulating the core fitted model itself. This is really what <a href="https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GridSearchCV.html">GridSearchCV</a> does, for example: it clones the base estimator and validates it on different combination of hyperparameters, returning the best model according to the chosen metric.</p>
+<section id="example-onnx-conversion" class="level4">
+<h4 class="anchored" data-anchor-id="example-onnx-conversion">Example: ONNX conversion</h4>
+<p>Due to certain incompatibilities across operating systems, In a previous project I needed to translate the model into a cross compatible object using ONNX.</p>
+<p>Again, this is easily done using the meta-estimator abstraction. There were several edge cases that the wrapper needed to handle, for example, if the fitted model did not have an available translation, the wrapper should fall back to the original fitted object. If the model had an available translation however, it was compiled. The wrapper also handled the rather quirky code block for producing inference outputs in ONNX, and hid it under a more familiar <code>predict</code> interface.</p>
+<p>Overall this helped fix a problem that up until then was slowing Data Scientists when training a model in different machines.</p>
+</section>
+</section>
+</section>
+<section id="why-use-meta-estimators" class="level2">
+<h2 class="anchored" data-anchor-id="why-use-meta-estimators">Why use meta-estimators?</h2>
+<p>Meta-estimators are a crucial abstraction for implementing custom blocks of business logic without disrupting the standard ML pipeline interface that is expected in virtually all MLOps libraries nowadays.</p>
+<p>Every project and every company has its quirks and its corner cases, like the ones I mentioned above. Meta-estimators allow us to make these bespoke blocks completely transparent to your ML system’s clients.</p>
+</section>
+<section id="closing-remarks" class="level2">
+<h2 class="anchored" data-anchor-id="closing-remarks">Closing remarks</h2>
+<p>Transformers, pipelines and meta-estimators give us the scaffolding to turn modelling code into something standardised, portable and extensible. In the next post, I’ll share some interesting meta-estimator examples I’ve encountered that solve relatively common problems.</p>
+
+
+</section>
+</section>
+
+ ]]></description>
+  <category>scikit-learn</category>
+  <category>design-patterns</category>
+  <guid>https://nestorsag.github.io/blog/posts/ML software design I/</guid>
+  <pubDate>Mon, 07 Sep 2026 23:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>
