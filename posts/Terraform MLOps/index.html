@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-09-16">
+<meta name="description" content="ML operations are infra updates. Could we leave all MLOps to Terraform?">
+
+<title>An MLOps command centre in Terraform – My ML notes</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-dark-5a1953863e1f72ef3b996ef827f01ca7.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-d9f106caa377c86700454ee71ec7b814.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="dark">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">My ML notes</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+</ul>
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item compact">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+  <li class="nav-item compact">
+    <a class="nav-link" href="https://github.com/nestorSag/blog"> <i class="bi bi-github" role="img">
+</i> 
+<span class="menu-text"></span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#first-design-choice-mlops-monorepo" id="toc-first-design-choice-mlops-monorepo" class="nav-link active" data-scroll-target="#first-design-choice-mlops-monorepo">First design choice: MLOps monorepo</a></li>
+  <li><a href="#second-design-choice-mlflow-model-registry" id="toc-second-design-choice-mlflow-model-registry" class="nav-link" data-scroll-target="#second-design-choice-mlflow-model-registry">Second design choice: MLFlow model registry</a></li>
+  <li><a href="#operations" id="toc-operations" class="nav-link" data-scroll-target="#operations">Operations</a>
+  <ul>
+  <li><a href="#terraform-training-job-module" id="toc-terraform-training-job-module" class="nav-link" data-scroll-target="#terraform-training-job-module">Terraform training job module</a></li>
+  <li><a href="#tracking-project-versions" id="toc-tracking-project-versions" class="nav-link" data-scroll-target="#tracking-project-versions">Tracking project versions</a></li>
+  <li><a href="#tracking-active-projects" id="toc-tracking-active-projects" class="nav-link" data-scroll-target="#tracking-active-projects">Tracking active projects</a></li>
+  <li><a href="#deployment-and-monitoring-jobs-module" id="toc-deployment-and-monitoring-jobs-module" class="nav-link" data-scroll-target="#deployment-and-monitoring-jobs-module">Deployment and monitoring jobs module</a></li>
+  <li><a href="#release-and-decomissioning" id="toc-release-and-decomissioning" class="nav-link" data-scroll-target="#release-and-decomissioning">Release and decomissioning</a></li>
+  </ul></li>
+  <li><a href="#orchestration" id="toc-orchestration" class="nav-link" data-scroll-target="#orchestration">Orchestration</a>
+  <ul>
+  <li><a href="#gitops-for-lifecycle-management" id="toc-gitops-for-lifecycle-management" class="nav-link" data-scroll-target="#gitops-for-lifecycle-management">GitOps for lifecycle management</a></li>
+  </ul></li>
+  <li><a href="#complexity-grows" id="toc-complexity-grows" class="nav-link" data-scroll-target="#complexity-grows">Complexity grows</a>
+  <ul>
+  <li><a href="#project-specific-infrastructure" id="toc-project-specific-infrastructure" class="nav-link" data-scroll-target="#project-specific-infrastructure">Project-specific infrastructure</a></li>
+  <li><a href="#more-sophisticated-monitoring-needs" id="toc-more-sophisticated-monitoring-needs" class="nav-link" data-scroll-target="#more-sophisticated-monitoring-needs">More sophisticated monitoring needs</a></li>
+  <li><a href="#shadow-deployments" id="toc-shadow-deployments" class="nav-link" data-scroll-target="#shadow-deployments">Shadow deployments</a></li>
+  <li><a href="#terraform-bugs" id="toc-terraform-bugs" class="nav-link" data-scroll-target="#terraform-bugs">Terraform bugs</a></li>
+  </ul></li>
+  <li><a href="#pros-and-cons" id="toc-pros-and-cons" class="nav-link" data-scroll-target="#pros-and-cons">Pros and cons</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">An MLOps command centre in Terraform</h1>
+  <div class="quarto-categories">
+    <div class="quarto-category">terraform</div>
+    <div class="quarto-category">design-patterns</div>
+  </div>
+  </div>
+
+<div>
+  <div class="description">
+    ML operations are infra updates. Could we leave all MLOps to Terraform?
+  </div>
+</div>
+
+
+<div class="quarto-title-meta">
+
+    
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">September 16, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p><img src="./images/terraform-mlops.png" class="img-fluid"></p>
+<p>The typical ML pipeline’s lifecycle consists of model training, registration, deployment, monitoring and decommissioning. All of these steps are usually reflected as changes in infrastructure, if nothing else because they all usually run on the cloud: even if scale doesn’t force you to do this, legal constraints around data usually will.</p>
+<p>On the other hand, Terraform is one the most popular tools for infrastructure-as-code, it helps Engineers track cloud infrastructure as versioned code. So it is worth asking whether Terraform could, by itself, function as a good MLOps command centre. But what would it look like, and is it a good idea?</p>
+<p>I tinkered with this a few years back and went as far as a creating a <a href="https://github.com/nestorSag/mlops-lite">minimal working prototype</a>, on which most of this post is based. It wasn’t all frictionless, but overall it was surprisingly simple and self-contained. Although I haven’t deployed it in a real project, I reckon it could work well for some teams.</p>
+<p>Throughout this post, I’ll assume for simplicity that AWS is the main cloud provider, so some familiarity with AWS services is assumed. Here is how I think it would work.</p>
+<section id="first-design-choice-mlops-monorepo" class="level1">
+<h1>First design choice: MLOps monorepo</h1>
+<p>Because an MLOps platform can be managing multiple independent ML projects, we need a folder, say <code>ml-projects</code>, where each project has their own subfolder. For simplicity, let’s assume each of these subfolders implements the <a href="https://mlflow.org/docs/latest/ml/projects/">MLFlow Project interface</a> so that it can be easily run by any orchestrator that sits on the layer above it, without any knowledge of its internals. But note any other simple entrypoint such as Makefile will also work.</p>
+<p>This means each subfolder is a full-fledged ML project in its own right and contains its custom data loaders and transformers, the project’s configuration, and maybe even environment managers. Ultimately, this requires a monorepo as the central MLOps platform, where every deployed ML project is tracked and maintained. Different teams of Data Scientists work on their own project’s folder, while MLOps engineers work on the layer above, at the repo level.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/structure.jpeg" class="img-fluid figure-img"></p>
+<figcaption>MLOps monorepo of ML projects</figcaption>
+</figure>
+</div>
+<p>While proofs of concept can be tracked in other repos, once a model is productionised it has to necessarily be migrated to this repo for centralised management. This will be particularly relevant when talking about lifecycle management.</p>
+</section>
+<section id="second-design-choice-mlflow-model-registry" class="level1">
+<h1>Second design choice: MLFlow model registry</h1>
+<p>While Terraform can orchestrate, we still need a model registry, so MLFLow is a central part of this set up. AWS SageMaker offers a fully managed MLFlow server, but if you want to save some money you could also manage it through Terraform. For completeness, the image below shows the infra you would need to spin it up if you do the latter. Back then I wrote a <a href="https://github.com/nestorSag/terraform-aws-mlflow-server">small public Terraform module</a> to do this, but there are probably much more up to date modules out there.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://github.com/nestorSag/mlops-lite/raw/main/other/images/mlflow-server.png" class="img-fluid figure-img"></p>
+<figcaption>Minimal infrastructure in AWS to support a self-managed MLFlow server</figcaption>
+</figure>
+</div>
+</section>
+<section id="operations" class="level1">
+<h1>Operations</h1>
+<p>The operations in this system map neatly to Terraform modules that create the necessary infrastructure for running training or inference jobs. While there are certain actions that need to happen external to Terraform for tracking other state, the vast majority of the work here is done through <code>terraform apply</code> under the hood.</p>
+<section id="terraform-training-job-module" class="level2">
+<h2 class="anchored" data-anchor-id="terraform-training-job-module">Terraform training job module</h2>
+<p>Training a model on the cloud typically involves containerising the model’s project (we are assuming an <a href="https://mlflow.org/docs/latest/ml/projects/">MLFlow Project</a>, for simplicity’s sake) and launching a batch compute job with the resulting image. While hardware requirements might vary from project to project, at system level the design below is usually sufficient:</p>
+<ol type="1">
+<li><p>Creation of a dedicated project’s ECR</p></li>
+<li><p>Creation and upload of the corresponding ML Project image to it</p></li>
+<li><p>Creation of a batch compute environment in Fargate or EC2 (configurable), along with queues and task definitions</p></li>
+<li><p>The subsequent submission of a batch job based on the created tasks definition</p></li>
+</ol>
+<p>The end result would be a new MLFlow run containing the fitted model’s artifact. Note again that it is the responsability of the corresponding ML Project to load the data, fit the model and log it to the MLFLow server, though the latter’s URI can be passed by the orchestrator.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://github.com/nestorSag/mlops-lite/raw/main/other/images/training-jobs.png" class="img-fluid figure-img"></p>
+<figcaption>Infra required for training jobs</figcaption>
+</figure>
+</div>
+</section>
+<section id="tracking-project-versions" class="level2">
+<h2 class="anchored" data-anchor-id="tracking-project-versions">Tracking project versions</h2>
+<p>While Terraform can track the state of infrastructure, it cannot track the state of local files, not out of the box at least. But ideally, we want Terraform updates to pick up modifications to the repo’s ML folders, in which case, whenever a training job is run, a new image version needs to be uploaded and tagged as <code>latest</code> automatically; otherwise no new image should be built. This can be addressed by creating a Terraform <code>local</code> variable that maps ML folders to a hash signature, that way any code change would be picked up by Terraform. It can also orchestrate image build and upload by creating a null <code>Docker build</code> resource tied to the project hash.</p>
+</section>
+<section id="tracking-active-projects" class="level2">
+<h2 class="anchored" data-anchor-id="tracking-active-projects">Tracking active projects</h2>
+<p>Once we tie Terraform state to local ML folders we have to make a distinction between an ML folder and an active ML project. Imagine we decommission a specific ML project and need to destroy the training infrastructure. If the folder hash is the only reflection of the ML project in Terraform’s state, we would need to delete the folder in order to remove its infrastructure which is not ideal. A better solution is the creation of persistent cloud state for active ML projects. This can be achieved through a AWS Parameter Store (SSM) secret that is updated every time a project goes online or offline. Terraform would then look at it (as a <code>data</code> variable) when updating infrastructure.</p>
+</section>
+<section id="deployment-and-monitoring-jobs-module" class="level2">
+<h2 class="anchored" data-anchor-id="deployment-and-monitoring-jobs-module">Deployment and monitoring jobs module</h2>
+<p>For this post I’ll assume deployment means a live inference endpoint, but batch inference would also be possible, and even simpler. For live inference, the workflow would be as follows:</p>
+<ol type="1">
+<li><p>Create an ECR repo for the project’s containerised models</p></li>
+<li><p>Containerise a specific model from the MLFlow Registry (this can happen locally) and upload it to its ECR</p></li>
+<li><p>Create an AWS SageMaker endpoint where the model is to be deployed, and tie it to its container image</p></li>
+<li><p>Create CloudWatch dashboards to track endpoint metrics, as well as model and data metrics</p></li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="https://github.com/nestorSag/mlops-lite/raw/main/other/images/deployment-jobs.png" class="img-fluid figure-img"></p>
+<figcaption>Infra required for inference jobs</figcaption>
+</figure>
+</div>
+<p>The deployment logic would check for <a href="#tracking-active-projects">active projects in SSM</a>, and throw an error if the deployment job references a project which hasn’t been trained before.</p>
+</section>
+<section id="release-and-decomissioning" class="level2">
+<h2 class="anchored" data-anchor-id="release-and-decomissioning">Release and decomissioning</h2>
+<p>Model decomissioning would be as simple as destroying the infrastructure corresponding to a deployment, while model release would involve uploading a new image to ECR and redeploying, which can be fully managed by Terraform. Both operations are deeply tied to tracking model versions and active projects, discussed above.</p>
+</section>
+</section>
+<section id="orchestration" class="level1">
+<h1>Orchestration</h1>
+<p>While Terraform does the majority of the job in the set up above, there are other things that need to happen outside it, such as submitting training jobs (done through AWS CLI). A humble Makefile can sit on top of Terraform as the entrypoint for Engineers, keeping track of dependent tasks, and also taking care of these external side actions.</p>
+<p>A little bit of Makefile magic goes a long way. For example, rules can be set up so that users pass information as named arguments, e.g.&nbsp;<code>project=&lt;project-name&gt;</code>. The end result is a minimalist but highly intuitive Makefile that can do MLOps based on commands like.</p>
+<pre><code>make training-job project=&lt;project-name&gt;</code></pre>
+<p>which would then create the infra if necessary and submit the job, and analogously for deployment. Overall, the call stack would look like</p>
+<ol type="1">
+<li><p>A user invokes a make rule, e.g.&nbsp;<code>make training-job project=&lt;my-project&gt;</code></p></li>
+<li><p>The list of active projects in SSM is updated based on the referenced project.</p></li>
+<li><p><code>terraform apply</code> is called</p></li>
+<li><p>A training job is submitted using the AWS CLI</p></li>
+</ol>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/call-stack.jpeg" class="img-fluid figure-img"></p>
+<figcaption>Workflow for a training job orchestrated by Makefile and Terraform</figcaption>
+</figure>
+</div>
+<section id="gitops-for-lifecycle-management" class="level2">
+<h2 class="anchored" data-anchor-id="gitops-for-lifecycle-management">GitOps for lifecycle management</h2>
+<p>Tracking project versions like suggested above introduces an error mode where uncomitted changes in an ML project can be deployed by accident. This could create headaches and hard-to-trace discrepancies. For this reason, ideally, operations are managed as GitHub Actions workflows, even if manually triggered, rather than launched from a work laptop.</p>
+</section>
+</section>
+<section id="complexity-grows" class="level1">
+<h1>Complexity grows</h1>
+<p>The system described above is sufficient for a small or medium team with basic MLOps requirements, but things can get more complicated once multiple ML projects are managed.</p>
+<section id="project-specific-infrastructure" class="level2">
+<h2 class="anchored" data-anchor-id="project-specific-infrastructure">Project-specific infrastructure</h2>
+<p>As the number of managed projects grow, there will be a need for using project-specific configuration and hardware, e.g.&nbsp;provisioning GPUs for deep learning projects. This is easy to incorporate. In the working prototype, each project folder can have its own <code>training-resource-requirements.json</code>, which is passed directly as AWS Batch configuration when a pool is created.</p>
+<p>This also creates the need to have a default configuration, which can be incorporated in the training job’s module itself.</p>
+</section>
+<section id="more-sophisticated-monitoring-needs" class="level2">
+<h2 class="anchored" data-anchor-id="more-sophisticated-monitoring-needs">More sophisticated monitoring needs</h2>
+<p>Monitoring in this set up is limited to off-the-shelf SageMaker endpoint monitoring, which includes hardware-level metrics such as IO ops, memory usage, latency, etc. The project also allows data capture during inference, so the endpoint can also be configured to compute feature drift metrics periodically. However, teams could require more bespoke monitoring with custom metrics, or integration with existing monitoring tools.</p>
+</section>
+<section id="shadow-deployments" class="level2">
+<h2 class="anchored" data-anchor-id="shadow-deployments">Shadow deployments</h2>
+<p>At the time of writing the prototype, AWS SageMaker endpoints supported shadow deployment only through a specific configuration set-up which points to an S3 artifact or a model’s image. Currently, the working prototype does not support shadow deployments out of the box. Configuring one would be a manual operation, and although straightforward, this raises a set of extra CLI requirements for specifying an optional shadow model as part of a deployment, updating an existing deployment to include or remove a shadow variant, and so on.</p>
+</section>
+<section id="terraform-bugs" class="level2">
+<h2 class="anchored" data-anchor-id="terraform-bugs">Terraform bugs</h2>
+<p>Terraform is not bug-free, and sometimes update operations will fail through no fault of the user. In practice this required a few scripts that are run at strategic points of the ML lifecycle to safeguard against odd Terraform behaviour.</p>
+</section>
+</section>
+<section id="pros-and-cons" class="level1">
+<h1>Pros and cons</h1>
+<p>Personally I really like this set up. It is minimalist and yet can get a lot done, while giving Data Scientists full freedom to structure their projects as they see fit, as long as they implement an agreed upon entrypoint. It also gives MLOps engineer a centralised control plane for all ML projects.</p>
+<p>On the other hand, whether this system is a good fit depends a lot on the team’s particular needs. For teams without dedicated MLE or MLOps Engineers, expecting Data Scientists to manage Terraform projects might be pushing it, and for companies with legacy infrastructure footprints where ML needs to be integrated, managing the interactions between ML and non-ML infrastructure could prove difficult.</p>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/nestorsag\.github\.io\/blog\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

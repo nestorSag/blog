@@ -42,17 +42,94 @@
     "text": "Closing remarks\nTransformers, pipelines and meta-estimators give us the scaffolding to turn modelling code into something standardised, portable and extensible. In the next post, I’ll share some interesting meta-estimator examples I’ve encountered that solve relatively common problems."
   },
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Posts",
-    "section": "",
-    "text": "ML Software Design I: the scaffolding\n\n\n\nscikit-learn\n\ndesign-patterns\n\n\n\nWhat scikit-learn’s design solves for ML software, from transformers to pipelines.\n\n\n\n\n\nSep 8, 2026\n\n\n\n\n\nNo matching items"
-  },
-  {
     "objectID": "about.html",
     "href": "about.html",
     "title": "About",
     "section": "",
     "text": "My name is Nestor, I am a Data Scientist turned ML engineer, and have been working in the field since before transformers were cool, sometimes doing research and most of the times working on applied projects. I am particularly interested in energy and net zero tech. Lately I have been doing more and more MLOps.\nI expand this blog whenever I find something interesting out there."
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Posts",
+    "section": "",
+    "text": "ML Software Design I: the scaffolding\n\n\n\nscikit-learn\n\ndesign-patterns\n\n\n\nWhat scikit-learn’s design solves for ML software, from transformers to pipelines.\n\n\n\n\n\nSep 8, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nAn MLOps command centre in Terraform\n\n\n\nterraform\n\ndesign-patterns\n\n\n\nML operations are infra updates. Could we leave all MLOps to Terraform?\n\n\n\n\n\nSep 16, 2026\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html",
+    "href": "posts/Terraform MLOps/index.html",
+    "title": "An MLOps command centre in Terraform",
+    "section": "",
+    "text": "The typical ML pipeline’s lifecycle consists of model training, registration, deployment, monitoring and decommissioning. All of these steps are usually reflected as changes in infrastructure, if nothing else because they all usually run on the cloud: even if scale doesn’t force you to do this, legal constraints around data usually will.\nOn the other hand, Terraform is one the most popular tools for infrastructure-as-code, it helps Engineers track cloud infrastructure as versioned code. So it is worth asking whether Terraform could, by itself, function as a good MLOps command centre. But what would it look like, and is it a good idea?\nI tinkered with this a few years back and went as far as a creating a minimal working prototype, on which most of this post is based. It wasn’t all frictionless, but overall it was surprisingly simple and self-contained. Although I haven’t deployed it in a real project, I reckon it could work well for some teams.\nThroughout this post, I’ll assume for simplicity that AWS is the main cloud provider, so some familiarity with AWS services is assumed. Here is how I think it would work."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#terraform-training-job-module",
+    "href": "posts/Terraform MLOps/index.html#terraform-training-job-module",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Terraform training job module",
+    "text": "Terraform training job module\nTraining a model on the cloud typically involves containerising the model’s project (we are assuming an MLFlow Project, for simplicity’s sake) and launching a batch compute job with the resulting image. While hardware requirements might vary from project to project, at system level the design below is usually sufficient:\n\nCreation of a dedicated project’s ECR\nCreation and upload of the corresponding ML Project image to it\nCreation of a batch compute environment in Fargate or EC2 (configurable), along with queues and task definitions\nThe subsequent submission of a batch job based on the created tasks definition\n\nThe end result would be a new MLFlow run containing the fitted model’s artifact. Note again that it is the responsability of the corresponding ML Project to load the data, fit the model and log it to the MLFLow server, though the latter’s URI can be passed by the orchestrator.\n\n\n\nInfra required for training jobs"
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#tracking-project-versions",
+    "href": "posts/Terraform MLOps/index.html#tracking-project-versions",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Tracking project versions",
+    "text": "Tracking project versions\nWhile Terraform can track the state of infrastructure, it cannot track the state of local files, not out of the box at least. But ideally, we want Terraform updates to pick up modifications to the repo’s ML folders, in which case, whenever a training job is run, a new image version needs to be uploaded and tagged as latest automatically; otherwise no new image should be built. This can be addressed by creating a Terraform local variable that maps ML folders to a hash signature, that way any code change would be picked up by Terraform. It can also orchestrate image build and upload by creating a null Docker build resource tied to the project hash."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#tracking-active-projects",
+    "href": "posts/Terraform MLOps/index.html#tracking-active-projects",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Tracking active projects",
+    "text": "Tracking active projects\nOnce we tie Terraform state to local ML folders we have to make a distinction between an ML folder and an active ML project. Imagine we decommission a specific ML project and need to destroy the training infrastructure. If the folder hash is the only reflection of the ML project in Terraform’s state, we would need to delete the folder in order to remove its infrastructure which is not ideal. A better solution is the creation of persistent cloud state for active ML projects. This can be achieved through a AWS Parameter Store (SSM) secret that is updated every time a project goes online or offline. Terraform would then look at it (as a data variable) when updating infrastructure."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#deployment-and-monitoring-jobs-module",
+    "href": "posts/Terraform MLOps/index.html#deployment-and-monitoring-jobs-module",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Deployment and monitoring jobs module",
+    "text": "Deployment and monitoring jobs module\nFor this post I’ll assume deployment means a live inference endpoint, but batch inference would also be possible, and even simpler. For live inference, the workflow would be as follows:\n\nCreate an ECR repo for the project’s containerised models\nContainerise a specific model from the MLFlow Registry (this can happen locally) and upload it to its ECR\nCreate an AWS SageMaker endpoint where the model is to be deployed, and tie it to its container image\nCreate CloudWatch dashboards to track endpoint metrics, as well as model and data metrics\n\n\n\n\nInfra required for inference jobs\n\n\nThe deployment logic would check for active projects in SSM, and throw an error if the deployment job references a project which hasn’t been trained before."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#release-and-decomissioning",
+    "href": "posts/Terraform MLOps/index.html#release-and-decomissioning",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Release and decomissioning",
+    "text": "Release and decomissioning\nModel decomissioning would be as simple as destroying the infrastructure corresponding to a deployment, while model release would involve uploading a new image to ECR and redeploying, which can be fully managed by Terraform. Both operations are deeply tied to tracking model versions and active projects, discussed above."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#gitops-for-lifecycle-management",
+    "href": "posts/Terraform MLOps/index.html#gitops-for-lifecycle-management",
+    "title": "An MLOps command centre in Terraform",
+    "section": "GitOps for lifecycle management",
+    "text": "GitOps for lifecycle management\nTracking project versions like suggested above introduces an error mode where uncomitted changes in an ML project can be deployed by accident. This could create headaches and hard-to-trace discrepancies. For this reason, ideally, operations are managed as GitHub Actions workflows, even if manually triggered, rather than launched from a work laptop."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#project-specific-infrastructure",
+    "href": "posts/Terraform MLOps/index.html#project-specific-infrastructure",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Project-specific infrastructure",
+    "text": "Project-specific infrastructure\nAs the number of managed projects grow, there will be a need for using project-specific configuration and hardware, e.g. provisioning GPUs for deep learning projects. This is easy to incorporate. In the working prototype, each project folder can have its own training-resource-requirements.json, which is passed directly as AWS Batch configuration when a pool is created.\nThis also creates the need to have a default configuration, which can be incorporated in the training job’s module itself."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#more-sophisticated-monitoring-needs",
+    "href": "posts/Terraform MLOps/index.html#more-sophisticated-monitoring-needs",
+    "title": "An MLOps command centre in Terraform",
+    "section": "More sophisticated monitoring needs",
+    "text": "More sophisticated monitoring needs\nMonitoring in this set up is limited to off-the-shelf SageMaker endpoint monitoring, which includes hardware-level metrics such as IO ops, memory usage, latency, etc. The project also allows data capture during inference, so the endpoint can also be configured to compute feature drift metrics periodically. However, teams could require more bespoke monitoring with custom metrics, or integration with existing monitoring tools."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#shadow-deployments",
+    "href": "posts/Terraform MLOps/index.html#shadow-deployments",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Shadow deployments",
+    "text": "Shadow deployments\nAt the time of writing the prototype, AWS SageMaker endpoints supported shadow deployment only through a specific configuration set-up which points to an S3 artifact or a model’s image. Currently, the working prototype does not support shadow deployments out of the box. Configuring one would be a manual operation, and although straightforward, this raises a set of extra CLI requirements for specifying an optional shadow model as part of a deployment, updating an existing deployment to include or remove a shadow variant, and so on."
+  },
+  {
+    "objectID": "posts/Terraform MLOps/index.html#terraform-bugs",
+    "href": "posts/Terraform MLOps/index.html#terraform-bugs",
+    "title": "An MLOps command centre in Terraform",
+    "section": "Terraform bugs",
+    "text": "Terraform bugs\nTerraform is not bug-free, and sometimes update operations will fail through no fault of the user. In practice this required a few scripts that are run at strategic points of the ML lifecycle to safeguard against odd Terraform behaviour."
   }
 ]
