@@ -59,7 +59,7 @@ While Terraform can track the state of infrastructure, it cannot track the state
 
 ## Tracking active projects
 
-Once we tie Terraform state to local ML folders we have to make a distinction between an ML folder and an active ML project. Imagine we decomission a specific ML project and need to destroy the training infrastructure. If the folder hash is the only reflection of the ML project in Terraform's state, we would need to delete the folder in order to remove its infrastructure which is, not ideal. A better solution is the creation of persistent cloud state for active ML projects. This can be achieved through a AWS Parameter Store (SSM) secret that is updated every time a project goes online or offline. Terraform would then look at it (as a `data` variable) when updating infrastructure.
+Once we tie Terraform state to local ML folders we have to make a distinction between an ML folder and an active ML project. Imagine we decommission a specific ML project and need to destroy the training infrastructure. If the folder hash is the only reflection of the ML project in Terraform's state, we would need to delete the folder in order to remove its infrastructure which is not ideal. A better solution is the creation of persistent cloud state for active ML projects. This can be achieved through a AWS Parameter Store (SSM) secret that is updated every time a project goes online or offline. Terraform would then look at it (as a `data` variable) when updating infrastructure.
 
 ## Deployment and monitoring jobs module
 
@@ -113,9 +113,9 @@ The system described above is sufficient for a small or medium team with basic M
 
 ## Project-specific infrastructure
 
-As the number of managed projects grow, there will be a need for using project-specific configuration and hardware, e.g. provisioning GPUs for deep learning projects. While this set up does not allow for this out of the box, it is easy to incorporate. In the working prototype, each project folder can have its own `training-resource-requirements.json`, which is passed directly as AWS Batch configuration.
+As the number of managed projects grow, there will be a need for using project-specific configuration and hardware, e.g. provisioning GPUs for deep learning projects. This is easy to incorporate. In the working prototype, each project folder can have its own `training-resource-requirements.json`, which is passed directly as AWS Batch configuration when a pool is created.
 
-This also creates the need to have a default configuration, which can be incorporated in the training job's module.
+This also creates the need to have a default configuration, which can be incorporated in the training job's module itself.
 
 ## More sophisticated monitoring needs
 
@@ -123,7 +123,7 @@ Monitoring in this set up is limited to off-the-shelf SageMaker endpoint monitor
 
 ## Shadow deployments
 
-At the time of writing, AWS SageMaker endpoints supported shadow deployment only through a specific configuration set-up which points to an S3 artifact or a model's image. Currently, the working prototype does not support shadow deployments out of the box. Configuring one would be a manual operation, and although straightforward, this raises a set of extra CLI requirements for specifying an optional shadow model as part of a deployment, updating an existing deployment to include or remove a shadow variant, and so on.
+At the time of writing the prototype, AWS SageMaker endpoints supported shadow deployment only through a specific configuration set-up which points to an S3 artifact or a model's image. Currently, the working prototype does not support shadow deployments out of the box. Configuring one would be a manual operation, and although straightforward, this raises a set of extra CLI requirements for specifying an optional shadow model as part of a deployment, updating an existing deployment to include or remove a shadow variant, and so on.
 
 ## Terraform bugs
 
