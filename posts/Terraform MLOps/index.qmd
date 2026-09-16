@@ -8,9 +8,9 @@ categories: [terraform, design-patterns]
 ![](./images/terraform-mlops.png)
 
 
-The typical ML pipeline's lifecycle consists of model training, registration, deployment, monitoring and decomisioning. All of these steps are typically reflected as changes in infrastructure, if nothing else because they all usually run on the cloud: even if scale doesn't force you to do this, legal constraints around data usually will.
+The typical ML pipeline's lifecycle consists of model training, registration, deployment, monitoring and decommissioning. All of these steps are typically reflected as changes in infrastructure, if nothing else because they all usually run on the cloud: even if scale doesn't force you to do this, legal constraints around data usually will.
 
-So it stands to reason that Terraform could orchestrate all of it, at least in principle. But what would it look like, and is it a good idea?
+On the other hand, Terraform is one the most popular tools for infrastructure-as-code, it helps Engineers track and automate the lifecycle of cloud infrastructure and operations. So it is worth asking whether Terraform could orchestrate all of the ML operations. But what would it look like, and is it a good idea?
 
 I tinkered with this a few years back and went as far as a creating a [minimal working prototype](https://github.com/nestorSag/mlops-lite), on which most of this post is based. It wasn't all frictionless, but overall it was surprisingly simple and self-contained. Although I haven't deployed it in a real project, I reckon it could work well for some teams.
 
@@ -41,11 +41,11 @@ The operations in this system map neatly to Terraform modules that create the ne
 
 Training a model on the cloud typically involves containerising the model's project (we are assuming an [MLFlow Project](https://mlflow.org/docs/latest/ml/projects/), for simplicity's sake) and launching a batch compute job with the resulting image. While hardware requirements might vary from project to project, at system level the design below is usually sufficient:
 
-1. Creation of a dedicated project's ECR, 
+1. Creation of a dedicated project's ECR
 
 2. Creation and upload of the corresponding ML Project image to it
 
-3. Creation of a batch compute environment in Fargate, along with queues and task definitions
+3. Creation of a batch compute environment in Fargate or EC2 (configurable), along with queues and task definitions
 
 4. The subsequent submission of a batch job based on the created tasks definition
 
@@ -53,13 +53,13 @@ The end result would be a new MLFlow run containing the fitted model's artifact.
 
 ![Infra required for training jobs](https://github.com/nestorSag/mlops-lite/raw/main/other/images/training-jobs.png)
 
-### Tracking project versions
+## Tracking project versions
 
 While Terraform can track the state of infrastructure, it cannot track the state of local files, not out of the box at least. But ideally, we want Terraform updates to pick up modifications to the repo's ML folders, in which case, whenever a training job is run, a new image version needs to be uploaded and tagged as `latest` automatically; otherwise no new image should be built. This can be addressed by creating a Terraform `local` variable that maps ML folders to a hash signature, that way any code change would be picked up by Terraform. It can also orchestrate image build and upload by creating a null `Docker build` resource tied to the project hash.
 
-### Tracking active projects
+## Tracking active projects
 
-Once we tie Terraform state to local ML folders we have to make a distinction between an ML folder and an active ML project. Imagine we decomission a specific ML project and need to destroy the training infrastructure. If the folder hash is the only reflection of the ML project in Terraform's state, we would need to delete the folder in order to remove its infrastructure which is, not ideal. A better solution is the creation of persistent cloud state for active ML projects. This can be achieved through a ASM secret that is updated every time a project goes online or offline. Terraform would then look at it (as a `data` variable) when updating infrastructure.
+Once we tie Terraform state to local ML folders we have to make a distinction between an ML folder and an active ML project. Imagine we decomission a specific ML project and need to destroy the training infrastructure. If the folder hash is the only reflection of the ML project in Terraform's state, we would need to delete the folder in order to remove its infrastructure which is, not ideal. A better solution is the creation of persistent cloud state for active ML projects. This can be achieved through a AWS Parameter Store (SSM) secret that is updated every time a project goes online or offline. Terraform would then look at it (as a `data` variable) when updating infrastructure.
 
 ## Deployment and monitoring jobs module
 
@@ -67,7 +67,7 @@ For this post I'll assume deployment means a live inference endpoint, but batch 
 
 1. Create an ECR repo for the project's containerised models
 
-2. Continerise a specific model from the MLFlow Registry (this can happen locally) and upload it to its ECR
+2. Containerise a specific model from the MLFlow Registry (this can happen locally) and upload it to its ECR
 
 3. Create an AWS SageMaker endpoint where the model is to be deployed, and tie it to its container image
 
@@ -75,7 +75,7 @@ For this post I'll assume deployment means a live inference endpoint, but batch 
 
 ![Infra required for inference jobs](https://github.com/nestorSag/mlops-lite/raw/main/other/images/deployment-jobs.png)
 
-The deployment logic would check for [active projects in ASM](##tracking-active-projects), and throw an error if the deployement job references a project which hasn't been trained before.
+The deployment logic would check for [active projects in SSM](#tracking-active-projects), and throw an error if the deployment job references a project which hasn't been trained before.
 
 ## Release and decomissioning
 
@@ -95,16 +95,15 @@ which would then create the infra if necessary and submit the job, and analogous
 
 1. A user invokes a make rule, e.g. `make training-job project=<my-project>`
 
-2. The list of active projects in ASM is updated based on the referenced project.
+2. The list of active projects in SSM is updated based on the referenced project.
 
-3. `terraform apply` is called, creating a batch pool, queues and job definitions if necessary, as well as an ECR and the project's image
+3. `terraform apply` is called
 
 4. A training job is submitted using the AWS CLI
 
 ![Workflow for a training job orchestrated by Makefile and Terraform](./images/call-stack.jpeg)
 
-
-# Lifecycle management
+## GitOps for lifecycle management
 
 Tracking project versions like suggested above introduces an error mode where uncomitted changes in an ML project can be deployed by accident. This could create headaches and hard-to-trace discrepancies. For this reason, ideally, operations are managed as GitHub Actions workflows, even if manually triggered, rather than launched from a work laptop.
 
@@ -132,6 +131,6 @@ Terraform is not bug-free, and sometimes update operations will fail through no 
 
 # Pros and cons
 
-Personally I really like this set up. It can do a lot with vey little, in terms of set up and dependencies, while giving Data Scientists full freedom to structure their projects as they see fit, as long as they implement an agreed upon entrypoint. It also gives MLOps engineer a centralised control plane for all ML projects.
+Personally I really like this set up. It can do a lot with very little, in terms of set up and dependencies, while giving Data Scientists full freedom to structure their projects as they see fit, as long as they implement an agreed upon entrypoint. It also gives MLOps engineer a centralised control plane for all ML projects.
 
 On the other hand, whether this system is a good fit depends a lot on the team's particular needs. For teams without dedicated MLE or MLOps Engineers, expecting Data Scientists to manage Terraform projects might be pushing it, and for companies with legacy infrastructure footprints where ML needs to be integrated, managing the interactions between ML and non-ML infrastructure could prove difficult.
