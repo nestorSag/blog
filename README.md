@@ -1,4 +1,4 @@
-# ML notes from the trenches
+# My ML notes
 
 A personal blog about Machine Learning and Data Science, built with [Quarto](https://quarto.org/).
 

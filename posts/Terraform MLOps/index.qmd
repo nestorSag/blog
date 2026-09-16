@@ -127,10 +127,10 @@ At the time of writing the prototype, AWS SageMaker endpoints supported shadow d
 
 ## Terraform bugs
 
-Terraform is not bug-free, and sometimes update operations will fail through no fault of the user. In practice this required a few Python scripts that are run at strategic points of the ML lifecycle to safeguard against odd Terraform behaviour.
+Terraform is not bug-free, and sometimes update operations will fail through no fault of the user. In practice this required a few scripts that are run at strategic points of the ML lifecycle to safeguard against odd Terraform behaviour.
 
 # Pros and cons
 
-Personally I really like this set up. It can do a lot with very little, in terms of set up and dependencies, while giving Data Scientists full freedom to structure their projects as they see fit, as long as they implement an agreed upon entrypoint. It also gives MLOps engineer a centralised control plane for all ML projects.
+Personally I really like this set up. It is minimalist and yet can get a lot done, while giving Data Scientists full freedom to structure their projects as they see fit, as long as they implement an agreed upon entrypoint. It also gives MLOps engineer a centralised control plane for all ML projects.
 
 On the other hand, whether this system is a good fit depends a lot on the team's particular needs. For teams without dedicated MLE or MLOps Engineers, expecting Data Scientists to manage Terraform projects might be pushing it, and for companies with legacy infrastructure footprints where ML needs to be integrated, managing the interactions between ML and non-ML infrastructure could prove difficult.

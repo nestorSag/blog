@@ -3,7 +3,7 @@ project:
   output-dir: _site
 
 website:
-  title: "ML notes from the trenches"
+  title: "My ML notes"
   description: "Some notes on machine learning and data science"
   site-url: https://nestorsag.github.io/blog/
   navbar:
