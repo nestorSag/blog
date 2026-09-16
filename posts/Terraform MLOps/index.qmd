@@ -1,16 +1,16 @@
 ---
 title: "An MLOps command centre in Terraform"
 description: "ML operations are infra updates. Could we leave all MLOps to Terraform?"
-date: "2026-10-08"
+date: "2026-09-16"
 categories: [terraform, design-patterns]
 ---
 
 ![](./images/terraform-mlops.png)
 
 
-The typical ML pipeline's lifecycle consists of model training, registration, deployment, monitoring and decommissioning. All of these steps are typically reflected as changes in infrastructure, if nothing else because they all usually run on the cloud: even if scale doesn't force you to do this, legal constraints around data usually will.
+The typical ML pipeline's lifecycle consists of model training, registration, deployment, monitoring and decommissioning. All of these steps are usually reflected as changes in infrastructure, if nothing else because they all usually run on the cloud: even if scale doesn't force you to do this, legal constraints around data usually will.
 
-On the other hand, Terraform is one the most popular tools for infrastructure-as-code, it helps Engineers track and automate the lifecycle of cloud infrastructure and operations. So it is worth asking whether Terraform could orchestrate all of the ML operations. But what would it look like, and is it a good idea?
+On the other hand, Terraform is one the most popular tools for infrastructure-as-code, it helps Engineers track cloud infrastructure as versioned code. So it is worth asking whether Terraform could, by itself, function as a good MLOps command centre. But what would it look like, and is it a good idea?
 
 I tinkered with this a few years back and went as far as a creating a [minimal working prototype](https://github.com/nestorSag/mlops-lite), on which most of this post is based. It wasn't all frictionless, but overall it was surprisingly simple and self-contained. Although I haven't deployed it in a real project, I reckon it could work well for some teams.
 
