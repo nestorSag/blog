@@ -114,11 +114,21 @@ The system described above is sufficient for a small or medium team with basic M
 
 ## Project-specific infrastructure
 
+As the number of managed projects grow, there will be a need for using project-specific configuration and hardware, e.g. provisioning GPUs for deep learning projects. While this set up does not allow for this out of the box, it is easy to incorporate. In the working prototype, each project folder can have its own `training-resource-requirements.json`, which is passed directly as AWS Batch configuration.
+
+This also creates the need to have a default configuration, which can be incorporated in the training job's module.
+
 ## More sophisticated monitoring needs
+
+Monitoring in this set up is limited to off-the-shelf SageMaker endpoint monitoring, which includes hardware-level metrics such as IO ops, memory usage, latency, etc. The project also allows data capture during inference, so the endpoint can also be configured to compute feature drift metrics periodically. However, teams could require more bespoke monitoring with custom metrics, or integration with existing monitoring tools.
 
 ## Shadow deployments
 
+At the time of writing, AWS SageMaker endpoints supported shadow deployment only through a specific configuration set-up which points to an S3 artifact or a model's image. Currently, the working prototype does not support shadow deployments out of the box. Configuring one would be a manual operation, and although straightforward, this raises a set of extra CLI requirements for specifying an optional shadow model as part of a deployment, updating an existing deployment to include or remove a shadow variant, and so on.
+
 ## Terraform bugs
+
+Terraform is not bug-free, and sometimes update operations will fail through no fault of the user. In practice this required a few Python scripts that are run at strategic points of the ML lifecycle to safeguard against odd Terraform behaviour.
 
 # Pros and cons
 
