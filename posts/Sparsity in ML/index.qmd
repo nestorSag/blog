@@ -1,0 +1,95 @@
+---
+title: "Sparsity in ML"
+description: "Some highlights from a great read"
+date: "2026-09-17"
+categories: [terraform, design-patterns]
+bibliography: references.bib
+---
+
+![](./images/sparsity-in-ml.jpeg)
+
+
+# sparsity from first principles (⚠️ Algebra ahead)
+
+Fitting an ML model is at its core solving a numerical optimisation problem. Say we have data $\mathbf{X}, \mathbf{y}$, a supervised model $f(\cdot; \theta)$ parametrised by $\mathbf{\theta}$ and a loss function $\mathcal{L}$. Under this framework, the fitted model is represented by the fitted parameters $\mathbf{\theta}^*$, defined as
+
+$$
+\mathbf{\theta}^* = \argmin_{\mathbf{\theta}} \mathcal{L}(\mathbf{y}, f(\mathbf{X}; \mathbf{\theta}))
+$$ {#eq-erm}
+
+
+We may suspect the model is overparametrised, or perhaps we are just interested in the parameters with the largest effects, so we want to sparsify the solution $\mathbf{\theta}^*$. We measure sparsity by counting the number of parameters that aren't zero in the fitted model. Define the L0 norm $||\cdot||_0$ as the count of non-zero elements in a vector. Then, we have several interrelated ways of incorporating sparsity into the formulation above. We could ask for at most $k$ parameters being non-zero
+
+$$
+\mathbf{\theta}^* = \argmin_{\mathbf{\theta}} \mathcal{L}(\mathbf{y}, f(\mathbf{X}; \mathbf{\theta})) \quad \text{s.t.} \quad ||\mathbf{\theta}||_0 \leq k
+$$ {#eq-l0-constrained}
+
+Or we could minimise the number of active parameters subject to an acceptable training error
+
+$$
+\mathbf{\theta}^* = \argmin_{\mathbf{\theta}} ||\mathbf{\theta}||_0 \quad \text{s.t.} \quad \mathcal{L}(\mathbf{y}, f(\mathbf{X}; \mathbf{\theta})) \leq \lambda, \quad \lambda \geq 0
+$$ {#eq-l0-error-constrained}
+
+Or we could simply add a penalty to the number of active parameters to encourage sparse solutions
+
+$$
+\mathbf{\theta}^* = \argmin_{\mathbf{\theta}} \mathcal{L}(\mathbf{y}, f(\mathbf{X}; \mathbf{\theta})) + \lambda ||\theta||_0, \quad \lambda \geq 0
+$$ {#eq-l0-penalized}
+
+The problem with the above formulations lies in the fact that optimising an L0 norm is a combinatorial NP-hard problem. But there is one trick from numerical optimisation we can use: convex relaxation. If we think of the L0 norm as the limit 
+
+$$
+||x||_0 = \lim_{p \to 0} ||x||_p^p 
+$$ {#eq-l0-limit}
+
+where $||\cdot||_p$ is [Minkowski's p-norm](https://en.wikipedia.org/wiki/Lp_space#The_p-norm_in_finite_dimensions), then the convex relaxation f the L0 norm is the L1 norm
+
+$$
+||x||_1 = \sum_{i=1}^n |x_i|
+$$ {#eq-l1-norm}
+
+Inducing sparsity through the L1 norm is the closest we can get with current computational methods to optimising for true sparsity $||x||_0$, and indeed if we replace the L0 for the L1 norm in the above optimisation problems, we obtain many of the classic sparse learning algorithms! for example, @eq-l0-penalized is the one being used in deep learning and other differentiable models, while @eq-l0-error-constrained is the formulation for [basis pursuit denoising](https://en.wikipedia.org/wiki/Basis_pursuit_denoising).
+
+# Some interesting sparse models
+
+
+## Matrix completion
+
+For me, a highlight of Hastie & Tibshirani's book was the chapter on sparse matrix decompositions, and particularly their formulation for matrix completion.
+
+Supose you have a matrix $\mathbf{X}$ with unobserved entries. This could be the case for example in a recommendation system where rows are users and columns are items, and you only ever observe a tiny subset of the universe of (user, item) ratings. It could also be the case that your data has missing values, and you are interested in imputing them.
+
+One of the most venerable matrix decomposition methods out there is the [SVD](https://en.wikipedia.org/wiki/Singular_value_decomposition), which happens to produce the best rank-k approximation of a matrix measured by the elementwise squared errors:
+
+$$
+\text{SVD}(\mathbf{X}) = U_k \Sigma_k V^{T}_k = \argmin_{U, \Sigma, V} ||\mathbf{X} - U \Sigma V^T ||_F^2 \quad \text{s.t.} \quad \text{rank}(U \Sigma V^T) \leq k
+$$
+
+Intuitively speaking, low rank approximation models will try to find a small number of relationships that explain most of the data. Using these relationships to interpolate unobserved entries sounds like a good idea in the absence of additional information. However, the optimality guarantees from the SVD do not apply to partially observed matrices, and numerical optimisation directly on a rank constraint is computationally infeasible. Instead, they suggest using the nuclear norm, which is defined as the sum of a matrix's singular values, as a convex relaxation of the rank constraint. Let $||\cdot||_*$ be the nuclear norm operator, and let $\Omega$ be the set of observed entries $(i, j)$ in $\mathbf{X}$. The authors propose finding a complete matrix $\hat{\mathbf{X}}$ through the following optimisation problem
+$$
+\hat{\mathbf{X}} = \argmin_{\mathbf{M}} \frac{1}{2} \sum_{(i,j) \in \Omega} (x_{i,j} - m_{i,j})^2 + \lambda ||M||_*, \quad \lambda > 0
+$$
+
+The penalty encourages the solution to be low rank, and because both terms are convex, the solution is the global optimum. In @mazumder2010spectral, the authors also propose an algorithm based on iterative SVD decompositions, so this model is quite practical to implement as well.
+
+## Clustering
+
+Clustering was one place where I didn't expect to find sparse models, as in my experience sparsity is more commonly associated with supervised learning. In @hastie2015statistical the authors propose a variation of [hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering) that incorporates a measure of sparsity. They define a feature weight vector $w$ and incorporate it in distance computations, penalising $||w||_1$ so that in the end only a subset of features retain nonzero weights. The objective is then to recover most of the variability in the distance matrix $\mathbf{D}$. Intuitively, this process would shrink the weights of redundant, constant, or noisy features to zero, leaving features that encapsulate most of the difference between data points. 
+
+The optimisation problem they propose is 
+
+$$
+\max_{u, w} u^T\mathbf{\Delta}w \quad \text{s.t.} \quad ||u||_2 \leq 1, \quad ||w||_2 \leq 1, \quad ||w||_1 \leq s, \quad w \geq 0
+$$
+
+where $\mathbf{\Delta}$ is an "unrolled" version of $\mathbf{D}$ and has shape $n^2 \times p$, where $n$ is the sample size and $p$ the data dimensionality. The i-th column of $\mathbf{\Delta}$ contains pairwise distances in the i-th dimension of feature space.
+
+Arguably, this model was formulated thinking of applications such as genomics where $n$ is small and $p$ is large. For most applications the opposite happens, and the computation of the objective function can become a problem due to the size of $\mathbf{\Delta}$. While there are some linear algebra identities that keep this problem manageable for Euclidean distance for large $n$, using other metrics in the distance matrix $\mathbf{D}$, such as L1 norm, could be challenging.
+
+More details are available in @witten2010framework.
+
+## Lossy compression
+
+
+# References
+
