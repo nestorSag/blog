@@ -8,6 +8,7 @@ bibliography: references.bib
 
 ![](./images/sparsity-in-ml.jpeg)
 
+Earlier this year I stumbled on the book *Statistical Learning with Sparsity* by Hastie & Tibshirani, and I found it to be a fantastic read. The book covers a wide range of applied problems in Machine Learning where sparse solutions are practical to implement and often highly beneficial, and it is written in the authors' usual thoroughness and clarity of exposition. Below are some notes and highlights.
 
 # sparsity from first principles (⚠️ Algebra ahead)
 
@@ -52,7 +53,6 @@ Inducing sparsity through the L1 norm is the closest we can get with current com
 
 # Some interesting sparse models
 
-
 ## Matrix completion
 
 For me, a highlight of Hastie & Tibshirani's book was the chapter on sparse matrix decompositions, and particularly their formulation for matrix completion.
@@ -82,13 +82,15 @@ $$
 \max_{u, w} u^T\mathbf{\Delta}w \quad \text{s.t.} \quad ||u||_2 \leq 1, \quad ||w||_2 \leq 1, \quad ||w||_1 \leq s, \quad w \geq 0
 $$
 
-where $\mathbf{\Delta}$ is an "unrolled" version of $\mathbf{D}$ and has shape $n^2 \times p$, where $n$ is the sample size and $p$ the data dimensionality. The i-th column of $\mathbf{\Delta}$ contains pairwise distances in the i-th dimension of feature space.
+where $\mathbf{\Delta}$ is an "unrolled" version of $\mathbf{D}$ and has shape $n^2 \times p$, where $n$ is the sample size and $p$ the data dimensionality. Each row represent a pair of points and each column represents a feature. Note $u$ is a nuisance variable here and it is discarded once the optimal $w$ is found, but $u$ is necessary to keep the optimisation problem bilinear, and hence easily solvable.
 
 Arguably, this model was formulated thinking of applications such as genomics where $n$ is small and $p$ is large. For most applications the opposite happens, and the computation of the objective function can become a problem due to the size of $\mathbf{\Delta}$. While there are some linear algebra identities that keep this problem manageable for Euclidean distance for large $n$, using other metrics in the distance matrix $\mathbf{D}$, such as L1 norm, could be challenging.
 
-More details are available in @witten2010framework.
+Full details are available in @witten2010framework.
 
-## Lossy compression
+## Signal representation
+
+Another interesting application I was not aware of before is the problem of sparse representation in overcomplete bases. This is closely related to basis pursuit and variants such as basis pursuit denoising. It is also referred to as dictionary learning in some implementations.
 
 
 # References
