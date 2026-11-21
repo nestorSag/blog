@@ -1,6 +1,6 @@
 ---
 title: "An MLOps command centre in Terraform"
-description: "ML operations are infra updates. Could we leave all MLOps to Terraform?"
+description: "MLOps operations are infra updates. Could we leave all of it to Terraform?"
 date: "2026-09-16"
 categories: [terraform, design-patterns]
 ---
