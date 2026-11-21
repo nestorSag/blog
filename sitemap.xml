@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://nestorsag.github.io/blog/posts/ML software design I/index.html</loc>
-    <lastmod>2026-09-16T19:36:49.035Z</lastmod>
-  </url>
-  <url>
-    <loc>https://nestorsag.github.io/blog/about.html</loc>
-    <lastmod>2026-09-16T19:36:48.988Z</lastmod>
-  </url>
-  <url>
     <loc>https://nestorsag.github.io/blog/index.html</loc>
-    <lastmod>2026-09-16T19:36:48.988Z</lastmod>
+    <lastmod>2026-11-21T12:34:05.221Z</lastmod>
   </url>
   <url>
     <loc>https://nestorsag.github.io/blog/posts/Terraform MLOps/index.html</loc>
-    <lastmod>2026-09-16T19:36:49.043Z</lastmod>
+    <lastmod>2026-11-21T12:34:05.266Z</lastmod>
+  </url>
+  <url>
+    <loc>https://nestorsag.github.io/blog/about.html</loc>
+    <lastmod>2026-11-21T12:34:05.221Z</lastmod>
+  </url>
+  <url>
+    <loc>https://nestorsag.github.io/blog/posts/Sparsity in ML/index.html</loc>
+    <lastmod>2026-11-21T12:34:05.260Z</lastmod>
+  </url>
+  <url>
+    <loc>https://nestorsag.github.io/blog/posts/ML software design I/index.html</loc>
+    <lastmod>2026-11-21T12:34:05.258Z</lastmod>
   </url>
 </urlset>

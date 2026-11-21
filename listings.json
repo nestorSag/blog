@@ -3,7 +3,8 @@
     "listing": "/index.html",
     "items": [
       "/posts/ML software design I/index.html",
-      "/posts/Terraform MLOps/index.html"
+      "/posts/Terraform MLOps/index.html",
+      "/posts/Sparsity in ML/index.html"
     ]
   }
 ]

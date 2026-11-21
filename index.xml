@@ -9,8 +9,82 @@
 <link>https://nestorsag.github.io/blog/</link>
 <atom:link href="https://nestorsag.github.io/blog/index.xml" rel="self" type="application/rss+xml"/>
 <description>Some notes on machine learning and data science</description>
-<generator>quarto-1.10.18</generator>
-<lastBuildDate>Wed, 16 Sep 2026 00:00:00 GMT</lastBuildDate>
+<generator>quarto-1.11.9</generator>
+<lastBuildDate>Sat, 21 Nov 2026 00:00:00 GMT</lastBuildDate>
+<item>
+  <title>Some interesting sparsity models</title>
+  <link>https://nestorsag.github.io/blog/posts/Sparsity in ML/</link>
+  <description><![CDATA[ 
+
+
+
+
+<p><img src="https://nestorsag.github.io/blog/posts/Sparsity in ML/images/sparsity-in-ml.jpeg" class="img-fluid"></p>
+<p>Earlier this year I got my hands on a copy of <em>Statistical Learning with Sparsity</em> by Hastie, Tibshirani &amp; Wainwright, and I am happy to say this is one of the best technical books I’ve read in a long time. Sparsity is an idea that has remained surprisingly current in ML and AI for decades, and the book is superbly written. It also illustrates, from first principles, several interesting applications of sparsity I didn’t know. Below are some of the ideas I found most interesting from it.</p>
+<section id="sec-first-principles" class="level1">
+<h1>Sparsity from first principles (⚠️ Algebra ahead)</h1>
+<p>Fitting an ML model is, at its core, all about solving a numerical optimisation problem. Say we have data <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7BX%7D,%20%5Cmathbf%7By%7D">, a supervised model <img src="https://latex.codecogs.com/png.latex?f(%5Ccdot;%20%5Ctheta)"> parametrised by <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7B%5Ctheta%7D"> and a loss function <img src="https://latex.codecogs.com/png.latex?%5Cmathcal%7BL%7D">. Under this framework, the fitted model is represented by the fitted parameters <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7B%5Ctheta%7D%5E*">, defined as</p>
+<p><span id="eq-erm"><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbf%7B%5Ctheta%7D%5E*%20=%20%5Cargmin_%7B%5Cmathbf%7B%5Ctheta%7D%7D%20%5Cmathcal%7BL%7D(%5Cmathbf%7By%7D,%20f(%5Cmathbf%7BX%7D;%20%5Cmathbf%7B%5Ctheta%7D))%0A%5Ctag%7B1%7D"></span></p>
+<p>We may suspect the model is overparametrised, or perhaps we are just interested in the parameters with the largest effects, so we want to sparsify the solution <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7B%5Ctheta%7D%5E*">. We measure sparsity by counting the number of parameters that aren’t zero in the fitted model. Define the L0 norm <img src="https://latex.codecogs.com/png.latex?%7C%7C%5Ccdot%7C%7C_0"> as the count of non-zero elements in a vector. Then, we have several interrelated ways of incorporating sparsity into the formulation above. We could ask for at most <img src="https://latex.codecogs.com/png.latex?k"> parameters being non-zero</p>
+<p><span id="eq-l0-constrained"><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbf%7B%5Ctheta%7D%5E*%20=%20%5Cargmin_%7B%5Cmathbf%7B%5Ctheta%7D%7D%20%5Cmathcal%7BL%7D(%5Cmathbf%7By%7D,%20f(%5Cmathbf%7BX%7D;%20%5Cmathbf%7B%5Ctheta%7D))%20%5Cquad%20%5Ctext%7Bs.t.%7D%20%5Cquad%20%7C%7C%5Cmathbf%7B%5Ctheta%7D%7C%7C_0%20%5Cleq%20k%0A%5Ctag%7B2%7D"></span></p>
+<p>Or we could minimise the number of active parameters subject to an acceptable training error</p>
+<p><span id="eq-l0-error-constrained"><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbf%7B%5Ctheta%7D%5E*%20=%20%5Cargmin_%7B%5Cmathbf%7B%5Ctheta%7D%7D%20%7C%7C%5Cmathbf%7B%5Ctheta%7D%7C%7C_0%20%5Cquad%20%5Ctext%7Bs.t.%7D%20%5Cquad%20%5Cmathcal%7BL%7D(%5Cmathbf%7By%7D,%20f(%5Cmathbf%7BX%7D;%20%5Cmathbf%7B%5Ctheta%7D))%20%5Cleq%20%5Clambda,%20%5Cquad%20%5Clambda%20%5Cgeq%200%0A%5Ctag%7B3%7D"></span></p>
+<p>Or we could simply add a penalty to the number of active parameters to encourage sparse solutions</p>
+<p><span id="eq-l0-penalized"><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbf%7B%5Ctheta%7D%5E*%20=%20%5Cargmin_%7B%5Cmathbf%7B%5Ctheta%7D%7D%20%5Cmathcal%7BL%7D(%5Cmathbf%7By%7D,%20f(%5Cmathbf%7BX%7D;%20%5Cmathbf%7B%5Ctheta%7D))%20+%20%5Clambda%20%7C%7C%5Cmathbf%7B%5Ctheta%7D%7C%7C_0,%20%5Cquad%20%5Clambda%20%5Cgeq%200%0A%5Ctag%7B4%7D"></span></p>
+<p>The problem with the above formulations lies in the fact that optimising an L0 norm is a combinatorial NP-hard problem. But there is one trick from numerical optimisation we can use: convex relaxation. If we think of the L0 norm as the limit</p>
+<p><span id="eq-l0-limit"><img src="https://latex.codecogs.com/png.latex?%0A%7C%7Cx%7C%7C_0%20=%20%5Clim_%7Bp%20%5Cto%200%7D%20%7C%7Cx%7C%7C_p%5Ep%0A%5Ctag%7B5%7D"></span></p>
+<p>where <img src="https://latex.codecogs.com/png.latex?%7C%7C%5Ccdot%7C%7C_p"> is <a href="https://en.wikipedia.org/wiki/Lp_space#The_p-norm_in_finite_dimensions">Minkowski’s p-norm</a>, then the convex relaxation of the L0 norm is the L1 norm</p>
+<p><span id="eq-l1-norm"><img src="https://latex.codecogs.com/png.latex?%0A%7C%7Cx%7C%7C_1%20=%20%5Csum_%7Bi=1%7D%5En%20%7Cx_i%7C%0A%5Ctag%7B6%7D"></span></p>
+<p>Inducing sparsity through the L1 norm is a computationally tractable alternative to optimising for true sparsity <img src="https://latex.codecogs.com/png.latex?%7C%7Cx%7C%7C_0">, and indeed if we replace the L0 norm with the L1 norm in the above optimisation problems, we obtain many of the classic sparse learning algorithms! For example, Equation&nbsp;4 is the one being used in deep learning and other differentiable models, while Equation&nbsp;3 is the formulation for <a href="https://en.wikipedia.org/wiki/Basis_pursuit_denoising">basis pursuit denoising</a>. L1 regularisation does not always recover the same solution as L0, but it is often a useful proxy.</p>
+</section>
+<section id="some-interesting-sparse-models" class="level1">
+<h1>Some interesting sparse models</h1>
+<section id="matrix-completion" class="level2">
+<h2 class="anchored" data-anchor-id="matrix-completion">Matrix completion</h2>
+<p>For me, a highlight of the book was the chapter on sparse matrix decompositions, and particularly their formulation for matrix completion.</p>
+<p>Suppose you have a matrix <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7BX%7D"> with unobserved entries. This could be the case, for example, in a recommendation system where rows are users and columns are items, and you only ever observe a tiny subset of the universe of (user, item) ratings. It could also be the case that your data has missing values, and you are interested in imputing them.</p>
+<p>One of the most venerable matrix decomposition methods out there is the <a href="https://en.wikipedia.org/wiki/Singular_value_decomposition">SVD</a>, which happens to produce the best rank-k approximation of a matrix measured by the elementwise squared errors:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Ctext%7BSVD%7D(%5Cmathbf%7BX%7D)%20=%20U_k%20%5CSigma_k%20V%5E%7BT%7D_k%20=%20%5Cargmin_%7BU,%20%5CSigma,%20V%7D%20%7C%7C%5Cmathbf%7BX%7D%20-%20U%20%5CSigma%20V%5ET%20%7C%7C_F%5E2%20%5Cquad%20%5Ctext%7Bs.t.%7D%20%5Cquad%20%5Ctext%7Brank%7D(U%20%5CSigma%20V%5ET)%20%5Cleq%20k%0A"></p>
+<p>Intuitively speaking, low-rank approximation models will try to find a small number of relationships that explain most of the data. Using these relationships to interpolate unobserved entries sounds like a good idea. However, the optimality guarantees from the SVD do not apply to partially observed matrices, and numerical optimisation directly on a rank constraint is computationally infeasible. Instead, they suggest using the nuclear norm, which is defined as the sum of a matrix’s singular values, as a convex relaxation of the rank constraint. Let <img src="https://latex.codecogs.com/png.latex?%7C%7C%5Ccdot%7C%7C_*"> be the nuclear norm operator, and let <img src="https://latex.codecogs.com/png.latex?%5COmega"> be the set of observed entries <img src="https://latex.codecogs.com/png.latex?(i,%20j)"> in <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7BX%7D">. The authors propose fitting a complete matrix <img src="https://latex.codecogs.com/png.latex?%5Chat%7B%5Cmathbf%7BX%7D%7D"> through the following optimisation problem <img src="https://latex.codecogs.com/png.latex?%0A%5Chat%7B%5Cmathbf%7BX%7D%7D%20=%20%5Cargmin_%7B%5Cmathbf%7BM%7D%7D%20%5Cfrac%7B1%7D%7B2%7D%20%5Csum_%7B(i,j)%20%5Cin%20%5COmega%7D%20(x_%7Bi,j%7D%20-%20m_%7Bi,j%7D)%5E2%20+%20%5Clambda%20%7C%7C%5Cmathbf%7BM%7D%7C%7C_*,%20%5Cquad%20%5Clambda%20%3E%200%0A"></p>
+<p>The penalty encourages the solution to be low rank, and because both terms are convex, the solution is a global optimum. Larger values of <img src="https://latex.codecogs.com/png.latex?%5Clambda"> favour simpler, lower-rank matrices, at the cost of fitting the observed entries less closely. In <span class="citation" data-cites="mazumder2010spectral">Mazumder et al. (2010)</span>, the authors also propose a solver based on iterative SVD decompositions, so this model is quite practical to implement as well.</p>
+</section>
+<section id="clustering" class="level2">
+<h2 class="anchored" data-anchor-id="clustering">Clustering</h2>
+<p>Clustering was one place where I didn’t expect to find sparse models, as in my experience sparsity is more commonly associated with supervised learning. In <span class="citation" data-cites="hastie2015statistical">Hastie et al. (2015)</span> the authors propose a variation of <a href="https://en.wikipedia.org/wiki/Hierarchical_clustering">hierarchical clustering</a> that incorporates a measure of sparsity. They define a feature weight vector <img src="https://latex.codecogs.com/png.latex?w"> and incorporate it in distance computations, constraining <img src="https://latex.codecogs.com/png.latex?%7C%7Cw%7C%7C_1"> so that in the end only a subset of features retain nonzero weights. The objective is then to recover most of the variability in the distance matrix <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7BD%7D">. Intuitively, this process would shrink the weights of redundant, constant, or noisy features to zero, leaving features that encapsulate most of the difference between data points.</p>
+<p>The optimisation problem they propose is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cmax_%7Bu,%20w%7D%20u%5ET%5Cmathbf%7B%5CDelta%7Dw%20%5Cquad%20%5Ctext%7Bs.t.%7D%20%5Cquad%20%7C%7Cu%7C%7C_2%20%5Cleq%201,%20%5Cquad%20%7C%7Cw%7C%7C_2%20%5Cleq%201,%20%5Cquad%20%7C%7Cw%7C%7C_1%20%5Cleq%20s,%20%5Cquad%20w%20%5Cgeq%200%0A"></p>
+<p>where <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7B%5CDelta%7D"> is an “unrolled” version of <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7BD%7D"> and has shape <img src="https://latex.codecogs.com/png.latex?n%5E2%20%5Ctimes%20p">, where <img src="https://latex.codecogs.com/png.latex?n"> is the sample size and <img src="https://latex.codecogs.com/png.latex?p"> the data dimensionality. Each row represent a pair of points and each column represents a feature. Note <img src="https://latex.codecogs.com/png.latex?u"> is a nuisance variable here and it is discarded once the optimal <img src="https://latex.codecogs.com/png.latex?w"> is found, but <img src="https://latex.codecogs.com/png.latex?u"> is necessary to keep the optimisation problem bilinear, and hence easily solvable.</p>
+<p>Arguably, this model was formulated thinking of applications such as genomics where <img src="https://latex.codecogs.com/png.latex?n"> is small and <img src="https://latex.codecogs.com/png.latex?p"> is large. For most applications the opposite happens, and the computation of the objective function can become a problem due to the size of <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7B%5CDelta%7D">. While there are some tricks that keep this problem manageable for Euclidean distance for large <img src="https://latex.codecogs.com/png.latex?n">, using other metrics in the distance matrix <img src="https://latex.codecogs.com/png.latex?%5Cmathbf%7BD%7D">, such as L1 norm, can make this a challenging numerical problem.</p>
+<p>Full details are available in <span class="citation" data-cites="witten2010framework">Witten and Tibshirani (2010)</span>.</p>
+</section>
+<section id="dictionary-learning" class="level2">
+<h2 class="anchored" data-anchor-id="dictionary-learning">Dictionary learning</h2>
+<p>The book speaks briefly about signal processing models, and how sparsity can be used to compress complex signals. A common approach to decompose a signal is representing it in a standard vector space, such as a Fourier space where canonical vectors are sinusoidal functions. But a signal will rarely have a sparse Fourier representation. However, we can combine two ideas here: the first is using an overcomplete basis, say, the union of a Fourier basis and a <a href="https://en.wikipedia.org/wiki/Haar_wavelet">Haar wavelet</a> basis. This overcomplete basis is not orthogonal or linearly independent anymore, but this is where the second idea, sparsity, comes in: by encouraging a sparse representation of the original signal in the overcomplete basis (using any of the formulations in the first section), we can usually get better compression. For example, a signal containing both smooth oscillations and abrupt changes may need many coefficients in either basis alone, but only a few sinusoids and wavelets together. Implementations of this idea are usually referenced as <a href="https://en.wikipedia.org/wiki/Sparse_dictionary_learning">dictionary learning</a>.</p>
+</section>
+</section>
+<section id="references" class="level1">
+
+
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">References</h2><div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-hastie2015statistical" class="csl-entry">
+Hastie, Trevor, Robert Tibshirani, and Martin Wainwright. 2015. <em>Statistical Learning with Sparsity: The Lasso and Generalizations</em>. CRC Press.
+</div>
+<div id="ref-mazumder2010spectral" class="csl-entry">
+Mazumder, Rahul, Trevor Hastie, and Robert Tibshirani. 2010. <span>“Spectral Regularization Algorithms for Learning Large Incomplete Matrices.”</span> <em>Journal of Machine Learning Research</em> 11 (77): 2287–322. <a href="https://www.jmlr.org/papers/v11/mazumder10a.html">https://www.jmlr.org/papers/v11/mazumder10a.html</a>.
+</div>
+<div id="ref-witten2010framework" class="csl-entry">
+Witten, Daniela M., and Robert Tibshirani. 2010. <span>“A Framework for Feature Selection in Clustering.”</span> <em>Journal of the American Statistical Association</em> 105 (490): 713–26. <a href="https://doi.org/10.1198/jasa.2010.tm09415">https://doi.org/10.1198/jasa.2010.tm09415</a>.
+</div>
+</div></section></div> ]]></description>
+  <category>machine-learning</category>
+  <category>statistical-learning</category>
+  <guid>https://nestorsag.github.io/blog/posts/Sparsity in ML/</guid>
+  <pubDate>Sat, 21 Nov 2026 00:00:00 GMT</pubDate>
+</item>
 <item>
   <title>An MLOps command centre in Terraform</title>
   <link>https://nestorsag.github.io/blog/posts/Terraform MLOps/</link>
